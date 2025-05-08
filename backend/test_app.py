@@ -1,108 +1,151 @@
 import unittest
-from app import app
 import os
-import tempfile
 import json
-from werkzeug.datastructures import FileStorage
+import shutil
+from datetime import datetime, timedelta
+from io import BytesIO
+from app import app, tasks, cleanup_old_tasks
 
 class TestApp(unittest.TestCase):
     def setUp(self):
+        app.config['TESTING'] = True
         self.app = app.test_client()
-        self.app.testing = True
-        # Create a temporary directory for test files
-        self.test_dir = tempfile.mkdtemp()
-        self.upload_dir = os.path.join(self.test_dir, 'input', 'video')
-        self.output_dir = os.path.join(self.test_dir, 'output', 'video')
-        os.makedirs(self.upload_dir, exist_ok=True)
-        os.makedirs(self.output_dir, exist_ok=True)
+        
+        # Create test directories
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+        os.makedirs(app.config['PROCESSED_FOLDER'], exist_ok=True)
+        
+        # Clear tasks
+        tasks.clear()
 
     def tearDown(self):
-        # Clean up temporary files
-        import shutil
-        shutil.rmtree(self.test_dir)
+        # Clean up test directories
+        shutil.rmtree(app.config['UPLOAD_FOLDER'])
+        shutil.rmtree(app.config['PROCESSED_FOLDER'])
+        
+        # Clear tasks
+        tasks.clear()
 
-    def test_upload_endpoint_no_file(self):
-        # Test upload endpoint without file
+    def test_upload_no_file(self):
         response = self.app.post('/api/upload')
         self.assertEqual(response.status_code, 400)
-        data = json.loads(response.data)
-        self.assertEqual(data['error'], 'No video file provided')
+        self.assertIn('No video file provided', response.get_json()['error'])
 
-    def test_upload_endpoint_invalid_file(self):
-        # Test upload endpoint with invalid file type
-        with tempfile.NamedTemporaryFile(suffix='.txt') as temp_file:
-            temp_file.write(b'This is not a video file')
-            temp_file.seek(0)
-            response = self.app.post('/api/upload', data={
-                'file': (temp_file, 'test.txt')
-            }, content_type='multipart/form-data')
-            self.assertEqual(response.status_code, 400)
-            data = json.loads(response.data)
-            self.assertEqual(data['error'], 'Invalid file type')
+    def test_upload_empty_file(self):
+        response = self.app.post('/api/upload', data={
+            'video': (BytesIO(), '')
+        })
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('No selected file', response.get_json()['error'])
 
-    def test_upload_endpoint_valid_file(self):
-        # Test upload endpoint with valid MP4 file
-        with tempfile.NamedTemporaryFile(suffix='.mp4') as temp_file:
-            temp_file.write(b'fake video content')
-            temp_file.seek(0)
-            response = self.app.post('/api/upload', data={
-                'file': (temp_file, 'test.mp4')
-            }, content_type='multipart/form-data')
-            self.assertEqual(response.status_code, 202)
-            data = json.loads(response.data)
-            self.assertIn('id', data)
-            self.assertIn('status', data)
-            self.assertEqual(data['status'], 'processing')
+    def test_upload_invalid_file_type(self):
+        response = self.app.post('/api/upload', data={
+            'video': (BytesIO(b'test data'), 'test.txt')
+        })
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Invalid file type', response.get_json()['error'])
 
-    def test_status_endpoint_nonexistent(self):
-        # Test status endpoint with non-existent task
+    def test_upload_file_too_large(self):
+        # Create a file larger than MAX_CONTENT_LENGTH
+        large_data = b'0' * (app.config['MAX_CONTENT_LENGTH'] + 1)
+        response = self.app.post('/api/upload', data={
+            'video': (BytesIO(large_data), 'test.mp4')
+        })
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('File too large', response.get_json()['error'])
+
+    def test_upload_success(self):
+        response = self.app.post('/api/upload', data={
+            'video': (BytesIO(b'test video data'), 'test.mp4')
+        })
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertIn('taskId', data)
+        self.assertIn('message', data)
+        
+        # Verify task was created
+        task_id = data['taskId']
+        self.assertIn(task_id, tasks)
+        self.assertEqual(tasks[task_id]['status'], 'pending')
+        self.assertEqual(tasks[task_id]['progress'], 0)
+
+    def test_status_not_found(self):
         response = self.app.get('/api/status/nonexistent')
         self.assertEqual(response.status_code, 404)
-        data = json.loads(response.data)
-        self.assertEqual(data['error'], 'Task not found')
+        self.assertIn('Task not found', response.get_json()['error'])
 
-    def test_status_endpoint_valid(self):
-        # Test status endpoint with valid task
-        # First create a task
-        with tempfile.NamedTemporaryFile(suffix='.mp4') as temp_file:
-            temp_file.write(b'fake video content')
-            temp_file.seek(0)
-            response = self.app.post('/api/upload', data={
-                'file': (temp_file, 'test.mp4')
-            }, content_type='multipart/form-data')
-            data = json.loads(response.data)
-            task_id = data['id']
+    def test_status_success(self):
+        # Create a test task
+        task_id = 'test-task'
+        tasks[task_id] = {
+            'status': 'processing',
+            'progress': 50,
+            'filename': 'test.mp4',
+            'created_at': datetime.now()
+        }
+        
+        response = self.app.get(f'/api/status/{task_id}')
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data['status'], 'processing')
+        self.assertEqual(data['progress'], 50)
+        self.assertEqual(data['filename'], 'test.mp4')
 
-            # Then check its status
-            response = self.app.get(f'/api/status/{task_id}')
-            self.assertEqual(response.status_code, 200)
-            data = json.loads(response.data)
-            self.assertIn('status', data)
-
-    def test_download_endpoint_nonexistent(self):
-        # Test download endpoint with non-existent task
+    def test_download_not_found(self):
         response = self.app.get('/api/download/nonexistent')
         self.assertEqual(response.status_code, 404)
-        data = json.loads(response.data)
-        self.assertEqual(data['error'], 'Task not found')
+        self.assertIn('Task not found', response.get_json()['error'])
 
-    def test_download_endpoint_not_ready(self):
-        # Test download endpoint with task not ready
-        # First create a task
-        with tempfile.NamedTemporaryFile(suffix='.mp4') as temp_file:
-            temp_file.write(b'fake video content')
-            temp_file.seek(0)
-            response = self.app.post('/api/upload', data={
-                'file': (temp_file, 'test.mp4')
-            }, content_type='multipart/form-data')
-            data = json.loads(response.data)
-            task_id = data['id']
+    def test_download_not_complete(self):
+        # Create a test task that's still processing
+        task_id = 'test-task'
+        tasks[task_id] = {
+            'status': 'processing',
+            'progress': 50,
+            'filename': 'test.mp4',
+            'created_at': datetime.now()
+        }
+        
+        response = self.app.get(f'/api/download/{task_id}')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Video processing not complete', response.get_json()['error'])
 
-            # Then try to download before it's ready
-            response = self.app.get(f'/api/download/{task_id}')
-            self.assertEqual(response.status_code, 400)
-            data = json.loads(response.data)
-            self.assertEqual(data['error'], 'Video processing not complete')
+    def test_cleanup_old_tasks(self):
+        # Create an old task
+        old_task_id = 'old-task'
+        old_input_path = os.path.join(app.config['UPLOAD_FOLDER'], 'old_test.mp4')
+        old_output_path = os.path.join(app.config['PROCESSED_FOLDER'], 'old_test_upscaled.mp4')
+        
+        # Create test files
+        with open(old_input_path, 'wb') as f:
+            f.write(b'test data')
+        with open(old_output_path, 'wb') as f:
+            f.write(b'test data')
+        
+        tasks[old_task_id] = {
+            'status': 'complete',
+            'input_path': old_input_path,
+            'output_path': old_output_path,
+            'created_at': datetime.now() - timedelta(hours=25)
+        }
+        
+        # Create a recent task
+        recent_task_id = 'recent-task'
+        tasks[recent_task_id] = {
+            'status': 'processing',
+            'created_at': datetime.now()
+        }
+        
+        # Run cleanup
+        cleanup_old_tasks()
+        
+        # Verify old task was cleaned up
+        self.assertNotIn(old_task_id, tasks)
+        self.assertFalse(os.path.exists(old_input_path))
+        self.assertFalse(os.path.exists(old_output_path))
+        
+        # Verify recent task remains
+        self.assertIn(recent_task_id, tasks)
 
 if __name__ == '__main__':
     unittest.main() 
