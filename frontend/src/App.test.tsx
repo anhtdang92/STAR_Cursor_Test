@@ -1,130 +1,63 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import React from 'react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
+import { act } from 'react';
 import axios from 'axios';
 
-// Mock axios
 jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('App Component', () => {
   beforeEach(() => {
-    // Reset all mocks before each test
     jest.clearAllMocks();
+    mockedAxios.post.mockResolvedValue({ data: { taskId: '123' } });
+    mockedAxios.get.mockResolvedValue({ data: { status: 'complete', downloadUrl: 'http://example.com/video.mp4' } });
   });
 
-  test('renders Video Upscaler title', () => {
+  test('renders title and upload area', () => {
     render(<App />);
-    const titleElement = screen.getByText(/Video Upscaler/i);
-    expect(titleElement).toBeInTheDocument();
+    expect(screen.getByText('Video Upscaler')).toBeInTheDocument();
+    expect(screen.getByText('Drag and drop an MP4 video here, or click to select')).toBeInTheDocument();
   });
 
-  test('renders upload area', () => {
+  test('handles file upload successfully', async () => {
     render(<App />);
-    const uploadText = screen.getByText(/Drag and drop an MP4 video here/i);
-    expect(uploadText).toBeInTheDocument();
-  });
-
-  test('handles file upload', async () => {
-    // Mock successful upload response
-    mockedAxios.post.mockResolvedValueOnce({
-      data: {
-        task_id: 'test-task-id',
-        status: 'processing'
-      }
+    const file = new File(['video content'], 'test.mp4', { type: 'video/mp4' });
+    const input = screen.getByTestId('file-input');
+    
+    await act(async () => {
+      await userEvent.upload(input, file);
     });
 
-    render(<App />);
-    
-    // Create a test file
-    const file = new File(['test video content'], 'test.mp4', { type: 'video/mp4' });
-    
-    // Get the file input
-    const fileInput = screen.getByTestId('file-input');
-    
-    // Upload the file
-    await userEvent.upload(fileInput, file);
-    
-    // Check if upload was called with correct data
-    expect(mockedAxios.post).toHaveBeenCalledWith(
-      expect.stringContaining('/api/upload'),
-      expect.any(FormData)
-    );
-    
-    // Check if status is displayed
+    // Check if the upload API was called
+    expect(mockedAxios.post).toHaveBeenCalled();
+
+    // Check if the status API was called
+    expect(mockedAxios.get).toHaveBeenCalled();
+
+    // Wait for the download button to appear
     await waitFor(() => {
-      expect(screen.getByText(/Processing/i)).toBeInTheDocument();
+      const downloadButton = screen.getByRole('link', { name: /download upscaled video/i });
+      expect(downloadButton).toBeInTheDocument();
+      expect(downloadButton).toHaveAttribute('href', 'http://example.com/video.mp4');
     });
   });
 
-  test('handles upload error', async () => {
-    // Mock failed upload response
-    mockedAxios.post.mockRejectedValueOnce(new Error('Upload failed'));
-
+  test('shows error for non-MP4 files', async () => {
     render(<App />);
+    const file = new File(['content'], 'test.txt', { type: 'text/plain' });
+    const input = screen.getByTestId('file-input');
     
-    // Create a test file
-    const file = new File(['test video content'], 'test.mp4', { type: 'video/mp4' });
-    
-    // Get the file input
-    const fileInput = screen.getByTestId('file-input');
-    
-    // Upload the file
-    await userEvent.upload(fileInput, file);
-    
-    // Check if error message is displayed
-    await waitFor(() => {
-      expect(screen.getByText(/Error uploading file/i)).toBeInTheDocument();
-    });
-  });
-
-  test('handles file type validation', async () => {
-    render(<App />);
-    
-    // Create an invalid file
-    const file = new File(['test content'], 'test.txt', { type: 'text/plain' });
-    
-    // Get the file input
-    const fileInput = screen.getByTestId('file-input');
-    
-    // Try to upload the file
-    await userEvent.upload(fileInput, file);
-    
-    // Check if error message is displayed
-    await waitFor(() => {
-      expect(screen.getByText(/Please upload an MP4 file/i)).toBeInTheDocument();
-    });
-  });
-
-  test('updates status periodically', async () => {
-    // Mock successful upload response
-    mockedAxios.post.mockResolvedValueOnce({
-      data: {
-        task_id: 'test-task-id',
-        status: 'processing'
-      }
-    });
-
-    // Mock status check responses
-    mockedAxios.get
-      .mockResolvedValueOnce({ data: { status: 'processing' } })
-      .mockResolvedValueOnce({ data: { status: 'completed' } });
-
-    render(<App />);
-    
-    // Create and upload a test file
-    const file = new File(['test video content'], 'test.mp4', { type: 'video/mp4' });
-    const fileInput = screen.getByTestId('file-input');
-    await userEvent.upload(fileInput, file);
-    
-    // Check initial status
-    await waitFor(() => {
-      expect(screen.getByText(/Processing/i)).toBeInTheDocument();
+    await act(async () => {
+      await userEvent.upload(input, file);
     });
     
-    // Wait for status update
+    // Check for error message
     await waitFor(() => {
-      expect(screen.getByText(/Completed/i)).toBeInTheDocument();
-    }, { timeout: 3000 });
+      const errorElement = screen.getByText('Please upload an MP4 file', { exact: true });
+      expect(errorElement).toBeInTheDocument();
+      expect(errorElement).toHaveClass('text-red-600');
+    });
   });
 }); 

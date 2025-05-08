@@ -102,7 +102,7 @@ const App: React.FC = () => {
               className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer
                 ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
             >
-              <input {...getInputProps()} />
+              <input {...getInputProps()} data-testid="file-input" />
               {uploadStatus.status === 'idle' && (
                 <div>
                   <p className="text-gray-600">
