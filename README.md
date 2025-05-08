@@ -1,3 +1,95 @@
+# Video Upscaler using STAR
+
+This application allows users to upload MP4 videos and upscale them using the STAR super-resolution model from NJU-PCALab/STAR.
+
+## Prerequisites
+
+- Node.js 16+ and npm
+- Python 3.8+
+- CUDA-compatible GPU (for STAR model inference)
+- Git
+
+## Setup
+
+1. Clone the repository:
+```bash
+git clone https://github.com/NJU-PCALab/STAR.git
+cd STAR
+```
+
+2. Set up the frontend:
+```bash
+cd frontend
+npm install
+```
+
+3. Set up the backend:
+```bash
+cd ../backend
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+4. Download the STAR model:
+```bash
+# Follow instructions from NJU-PCALab/STAR to download the model
+# Update the model path in backend/app.py
+```
+
+## Running the Application
+
+1. Start the backend server:
+```bash
+cd backend
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+python app.py
+```
+
+2. Start the frontend development server:
+```bash
+cd frontend
+npm start
+```
+
+3. Open your browser and navigate to `http://localhost:3000`
+
+## Usage
+
+1. Click the upload area or drag and drop an MP4 video file
+2. Wait for the upload to complete
+3. The video will be processed using the STAR model
+4. Once processing is complete, click the download button to get the upscaled video
+
+## Project Structure
+
+```
+.
+├── frontend/
+│   ├── src/
+│   │   ├── App.tsx
+│   │   └── components/
+│   └── package.json
+├── backend/
+│   ├── app.py
+│   ├── requirements.txt
+│   └── temp/
+│       ├── uploads/
+│       └── processed/
+└── README.md
+```
+
+## Notes
+
+- Maximum video file size: 500MB
+- Only MP4 files are supported
+- Processing time depends on video length and GPU capabilities
+- Temporary files are automatically cleaned up after processing
+
+## License
+
+This project uses the STAR model which is subject to its own license terms. Please refer to the original repository for license information.
+
 <div align="center">
     <h1>
     STAR: Spatial-Temporal Augmentation with Text-to-Video Models for Real-World Video Super-Resolution
