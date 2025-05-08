@@ -2,10 +2,17 @@ import React, { useState } from 'react';
 import VideoUploader from './components/VideoUploader';
 import Button from './components/Button';
 import Card from './components/Card';
+import UpscaleSettings, { UpscaleSettings as Settings } from './components/UpscaleSettings';
 
 const App: React.FC = () => {
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [settings, setSettings] = useState<Settings>({
+    scale: 4,
+    quality: 'balanced',
+    denoiseLevel: 0,
+    preserveDetails: true
+  });
 
   const handleUploadComplete = (url: string) => {
     setDownloadUrl(url);
@@ -48,10 +55,17 @@ const App: React.FC = () => {
             </p>
           </Card>
 
+          {/* Settings */}
+          <UpscaleSettings
+            settings={settings}
+            onSettingsChange={setSettings}
+          />
+
           {/* Video Uploader */}
           <VideoUploader
             onUploadComplete={handleUploadComplete}
             onError={handleError}
+            settings={settings}
           />
 
           {/* Error Display */}

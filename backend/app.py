@@ -3,6 +3,7 @@ import uuid
 import subprocess
 import threading
 import time
+import json
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
@@ -62,7 +63,32 @@ def get_video_duration(input_path):
         logger.error(f"Error getting video duration: {str(e)}")
         return None
 
-def process_video(task_id, input_path, output_path):
+def get_star_args(settings):
+    """Convert frontend settings to STAR model arguments"""
+    args = []
+    
+    # Scale factor
+    args.extend(['--scale_factor', str(settings.get('scale', 4))])
+    
+    # Quality preset
+    quality = settings.get('quality', 'balanced')
+    if quality == 'fast':
+        args.extend(['--fast_mode', '--light_mode'])
+    elif quality == 'quality':
+        args.extend(['--high_quality'])
+    
+    # Denoise level
+    denoise = settings.get('denoiseLevel', 0)
+    if denoise > 0:
+        args.extend(['--denoise_level', str(denoise)])
+    
+    # Preserve details
+    if settings.get('preserveDetails', True):
+        args.extend(['--preserve_details'])
+    
+    return args
+
+def process_video(task_id, input_path, output_path, settings):
     """Process video with progress tracking and error handling"""
     try:
         tasks[task_id]['status'] = 'processing'
@@ -73,13 +99,16 @@ def process_video(task_id, input_path, output_path):
         if duration is None:
             raise Exception("Could not determine video duration")
         
+        # Get STAR model arguments from settings
+        star_args = get_star_args(settings)
+        
         # Run STAR inference
         cmd = [
             'bash', 'video_super_resolution/scripts/inference_sr.sh',
             '--input_video', input_path,
             '--output_video', output_path,
             '--model_path', app.config['MODEL_PATH']
-        ]
+        ] + star_args
         
         process = subprocess.Popen(
             cmd,
@@ -96,7 +125,7 @@ def process_video(task_id, input_path, output_path):
             # Update progress based on output file size
             if os.path.exists(output_path):
                 current_size = os.path.getsize(output_path)
-                expected_size = os.path.getsize(input_path) * 4  # Assuming 4x upscaling
+                expected_size = os.path.getsize(input_path) * settings.get('scale', 4)
                 progress = min(95, (current_size / expected_size) * 100)
                 tasks[task_id]['progress'] = progress
                 
@@ -145,6 +174,14 @@ def upload_video():
         if request.content_length > app.config['MAX_CONTENT_LENGTH']:
             return jsonify({'error': f"File too large. Maximum size is {app.config['MAX_CONTENT_LENGTH'] // (1024*1024)}MB"}), 400
             
+        # Parse settings
+        settings = {}
+        if 'settings' in request.form:
+            try:
+                settings = json.loads(request.form['settings'])
+            except json.JSONDecodeError:
+                return jsonify({'error': 'Invalid settings format'}), 400
+            
         # Generate unique task ID and save file
         task_id = str(uuid.uuid4())
         filename = secure_filename(file.filename)
@@ -160,13 +197,14 @@ def upload_video():
             'input_path': input_path,
             'output_path': output_path,
             'created_at': datetime.now(),
-            'filename': filename
+            'filename': filename,
+            'settings': settings
         }
         
         # Start processing in background
         thread = threading.Thread(
             target=process_video,
-            args=(task_id, input_path, output_path)
+            args=(task_id, input_path, output_path, settings)
         )
         thread.start()
         
@@ -192,7 +230,8 @@ def get_status(task_id):
             'progress': task['progress'],
             'downloadUrl': task.get('download_url'),
             'error': task.get('error'),
-            'filename': task['filename']
+            'filename': task['filename'],
+            'settings': task.get('settings', {})
         })
         
     except Exception as e:

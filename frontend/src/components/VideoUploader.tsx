@@ -4,13 +4,19 @@ import axios from 'axios';
 import Button from './Button';
 import Card from './Card';
 import ProgressBar from './ProgressBar';
+import type { UpscaleSettings } from './UpscaleSettings';
 
 interface VideoUploaderProps {
   onUploadComplete: (downloadUrl: string) => void;
   onError: (error: string) => void;
+  settings: UpscaleSettings;
 }
 
-const VideoUploader: React.FC<VideoUploaderProps> = ({ onUploadComplete, onError }) => {
+const VideoUploader: React.FC<VideoUploaderProps> = ({
+  onUploadComplete,
+  onError,
+  settings
+}) => {
   const [uploadStatus, setUploadStatus] = useState<{
     status: 'idle' | 'uploading' | 'processing' | 'complete' | 'error';
     progress: number;
@@ -31,6 +37,7 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ onUploadComplete, onError
 
     const formData = new FormData();
     formData.append('video', file);
+    formData.append('settings', JSON.stringify(settings));
 
     try {
       setUploadStatus({ status: 'uploading', progress: 0 });
@@ -49,7 +56,7 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ onUploadComplete, onError
       // Poll for status
       const checkStatus = async () => {
         const statusResponse = await axios.get(`http://localhost:5000/api/status/${taskId}`);
-        const { status, downloadUrl, error } = statusResponse.data;
+        const { status, downloadUrl, error, progress } = statusResponse.data;
 
         if (status === 'complete' && downloadUrl) {
           setUploadStatus({ status: 'complete', progress: 100 });
@@ -62,6 +69,10 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ onUploadComplete, onError
           });
           onError(error || 'Processing failed');
         } else {
+          setUploadStatus(prev => ({
+            ...prev,
+            progress: 50 + (progress || 0) * 0.5 // Map processing progress to 50-100%
+          }));
           setTimeout(checkStatus, 2000);
         }
       };
@@ -76,7 +87,7 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ onUploadComplete, onError
       });
       onError(errorMessage);
     }
-  }, [onUploadComplete, onError]);
+  }, [onUploadComplete, onError, settings]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -92,7 +103,7 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ onUploadComplete, onError
       case 'uploading':
         return 'Uploading...';
       case 'processing':
-        return 'Processing with STAR AI...';
+        return `Processing with STAR AI (${settings.scale}x upscale, ${settings.quality} quality)...`;
       case 'complete':
         return 'Processing complete!';
       case 'error':
@@ -128,6 +139,17 @@ const VideoUploader: React.FC<VideoUploaderProps> = ({ onUploadComplete, onError
           </div>
         )}
       </div>
+
+      {/* Settings Summary */}
+      {uploadStatus.status === 'idle' && (
+        <div className="mt-4 p-4 bg-apple-gray-50 rounded-lg">
+          <p className="text-sm text-apple-gray-400">
+            Selected settings: {settings.scale}x upscale, {settings.quality} quality
+            {settings.denoiseLevel > 0 && `, denoise level ${settings.denoiseLevel}`}
+            {settings.preserveDetails && ', preserve details'}
+          </p>
+        </div>
+      )}
     </Card>
   );
 };
