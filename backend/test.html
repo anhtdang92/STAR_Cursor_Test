@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Upload Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f7;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1d1d1f;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #1d1d1f;
+            font-weight: 500;
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px dashed #86868b;
+            border-radius: 8px;
+            background-color: #f5f5f7;
+        }
+        select, input[type="range"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #d2d2d7;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #0071e3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #0077ed;
+        }
+        #status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+        .success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #f5f5f7;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+            display: none;
+        }
+        .progress {
+            width: 0%;
+            height: 100%;
+            background-color: #0071e3;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Video Upload Test</h1>
+        <form id="uploadForm">
+            <div class="form-group">
+                <label for="video">Select Video File (MP4 only):</label>
+                <input type="file" id="video" name="video" accept=".mp4" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="scale">Upscale Factor:</label>
+                <select id="scale" name="scale">
+                    <option value="2">2x</option>
+                    <option value="4" selected>4x</option>
+                    <option value="8">8x</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="quality">Quality Preset:</label>
+                <select id="quality" name="quality">
+                    <option value="fast">Fast</option>
+                    <option value="balanced" selected>Balanced</option>
+                    <option value="quality">High Quality</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="denoise">Denoise Level: <span id="denoiseValue">0</span>%</label>
+                <input type="range" id="denoise" name="denoiseLevel" min="0" max="100" value="0">
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="preserveDetails" name="preserveDetails" checked>
+                    Preserve Details
+                </label>
+            </div>
+
+            <button type="submit">Upload and Process</button>
+        </form>
+
+        <div id="status"></div>
+        <div class="progress-bar" id="progressBar">
+            <div class="progress" id="progress"></div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('uploadForm');
+        const status = document.getElementById('status');
+        const progressBar = document.getElementById('progressBar');
+        const progress = document.getElementById('progress');
+        const denoiseValue = document.getElementById('denoiseValue');
+        const denoiseSlider = document.getElementById('denoise');
+
+        // Update denoise value display
+        denoiseSlider.addEventListener('input', (e) => {
+            denoiseValue.textContent = e.target.value;
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            const videoFile = document.getElementById('video').files[0];
+            
+            if (!videoFile) {
+                showStatus('Please select a video file', 'error');
+                return;
+            }
+
+            formData.append('video', videoFile);
+            
+            // Add settings
+            const settings = {
+                scale: parseInt(document.getElementById('scale').value),
+                quality: document.getElementById('quality').value,
+                denoiseLevel: parseInt(document.getElementById('denoise').value),
+                preserveDetails: document.getElementById('preserveDetails').checked
+            };
+            
+            formData.append('settings', JSON.stringify(settings));
+
+            try {
+                showStatus('Uploading video...', 'success');
+                progressBar.style.display = 'block';
+                
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showStatus('Upload successful! Processing video...', 'success');
+                    pollStatus(data.taskId);
+                } else {
+                    showStatus(`Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`Error: ${error.message}`, 'error');
+            }
+        });
+
+        function showStatus(message, type) {
+            status.textContent = message;
+            status.className = type;
+            status.style.display = 'block';
+        }
+
+        async function pollStatus(taskId) {
+            try {
+                const response = await fetch(`/api/status/${taskId}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    progress.style.width = `${data.progress}%`;
+                    
+                    if (data.status === 'complete') {
+                        showStatus('Processing complete!', 'success');
+                        // Add download link
+                        const downloadLink = document.createElement('a');
+                        downloadLink.href = data.downloadUrl;
+                        downloadLink.textContent = 'Download Processed Video';
+                        downloadLink.style.display = 'block';
+                        downloadLink.style.marginTop = '10px';
+                        status.appendChild(downloadLink);
+                    } else if (data.status === 'error') {
+                        showStatus(`Error: ${data.error}`, 'error');
+                    } else {
+                        // Continue polling
+                        setTimeout(() => pollStatus(taskId), 1000);
+                    }
+                } else {
+                    showStatus(`Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`Error: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html> 

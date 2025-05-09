@@ -1,18 +1,25 @@
 # Video Upscaler
 
-A full-stack application for AI-powered video upscaling, built with React and Flask.
+A full-stack application for AI-powered video upscaling, built with React and Flask. This project implements the STAR (Spatial-Temporal Augmentation) model for high-quality video enhancement.
 
-## Features
+## 🌟 Features
 
-- Upload and process MP4 videos
-- Multiple upscaling options (2x, 4x, 8x)
-- AI model selection (Artemis, Gaia, Theia)
-- Denoise and detail enhancement controls
-- Real-time processing status
-- Apple-style user interface
-- Responsive design
+- **Video Processing**
+  - Upload and process MP4 videos (up to 500MB)
+  - Multiple upscaling options (2x, 4x, 8x)
+  - AI model selection (Artemis, Gaia, Theia)
+  - Denoise and detail enhancement controls
+  - Real-time processing status
+  - Progress tracking and ETA
 
-## Tech Stack
+- **User Interface**
+  - Modern Apple-style design
+  - Responsive layout
+  - Real-time video preview
+  - Intuitive processing controls
+  - Progress visualization
+
+## 🛠️ Tech Stack
 
 ### Frontend
 - React with TypeScript
@@ -24,16 +31,17 @@ A full-stack application for AI-powered video upscaling, built with React and Fl
 - Python Flask
 - FFmpeg for video processing
 - STAR AI model for upscaling
+- PyTorch for deep learning
 
-## Getting Started
+## 📋 Prerequisites
 
-### Prerequisites
 - Node.js 16+
 - Python 3.8+
 - FFmpeg
 - Git
+- GPU with 24GB+ VRAM (recommended)
 
-### Installation
+## 🚀 Installation
 
 1. Clone the repository:
 ```bash
@@ -62,15 +70,20 @@ python app.py
 mkdir backend/uploads backend/processed
 ```
 
-## Usage
+## 💻 Usage
 
 1. Open your browser and navigate to `http://localhost:3000`
-2. Upload an MP4 video file (max 100MB)
-3. Configure processing settings
+2. Upload an MP4 video file (max 500MB)
+3. Configure processing settings:
+   - Select upscaling factor (2x, 4x, 8x)
+   - Choose AI model (Artemis, Gaia, Theia)
+   - Adjust denoise level
+   - Toggle detail enhancement
 4. Click "Process" to start upscaling
-5. Download the processed video when complete
+5. Monitor progress in real-time
+6. Download the processed video when complete
 
-## Development
+## 🔧 Development
 
 ### Running Tests
 ```bash
@@ -89,9 +102,73 @@ cd frontend
 npm run build
 ```
 
-## License
+## 📊 Performance
+
+- Processing time depends on:
+  - Video length
+  - Resolution
+  - GPU capabilities
+  - Selected upscaling factor
+- Recommended specifications:
+  - GPU: NVIDIA with 24GB+ VRAM
+  - RAM: 32GB+
+  - Storage: SSD recommended
+
+## 🔒 Security
+
+- File size limits enforced
+- Secure file handling
+- Input validation
+- Error handling and logging
+- Automatic cleanup of temporary files
+
+## 📝 Notes
+
+- Maximum video file size: 500MB
+- Only MP4 files are supported
+- Processing time varies based on video length and GPU capabilities
+- Temporary files are automatically cleaned up after processing
+- GPU memory requirements increase with higher upscaling factors
+
+## 📄 License
 
 MIT License - see LICENSE file for details
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📧 Contact
+
+For any inquiries, please reach out via email at `ruixie0097@gmail.com`
+
+## 🙏 Acknowledgments
+
+This project is based on:
+- [I2VGen-XL](https://github.com/ali-vilab/VGen)
+- [VEnhancer](https://github.com/Vchitect/VEnhancer)
+- [CogVideoX](https://github.com/THUDM/CogVideo)
+- [OpenVid-1M](https://github.com/NJU-PCALab/OpenVid-1M)
+
+## 📚 Citation
+
+If this project helps your research or work, please consider citing our paper:
+
+```bibtex
+@misc{xie2025starspatialtemporalaugmentationtexttovideo,
+      title={STAR: Spatial-Temporal Augmentation with Text-to-Video Models for Real-World Video Super-Resolution}, 
+      author={Rui Xie and Yinhong Liu and Penghao Zhou and Chen Zhao and Jun Zhou and Kai Zhang and Zhenyu Zhang and Jian Yang and Zhenheng Yang and Ying Tai},
+      year={2025},
+      eprint={2501.02976},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2501.02976}, 
+}
+```
 
 <div align="center">
     <h1>
