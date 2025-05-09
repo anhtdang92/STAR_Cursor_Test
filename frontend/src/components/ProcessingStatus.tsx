@@ -24,32 +24,6 @@ const Container = styled.div`
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 `;
 
-interface StatusIconProps {
-  status: ProcessingStatusProps['status'];
-}
-
-const StatusIcon = styled.div<StatusIconProps>`
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 16px;
-  background: ${(props: StatusIconProps) => {
-    switch (props.status) {
-      case 'processing':
-        return '#007AFF';
-      case 'completed':
-        return '#34C759';
-      case 'error':
-        return '#FF3B30';
-      default:
-        return '#8E8E93';
-    }
-  }};
-`;
-
 const ProgressBar = styled.div`
   height: 4px;
   background: rgba(0, 0, 0, 0.1);

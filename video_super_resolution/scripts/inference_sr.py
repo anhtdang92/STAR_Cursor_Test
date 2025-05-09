@@ -10,6 +10,7 @@ from pathlib import Path
 import cv2
 import signal
 from tqdm import tqdm
+import torch.nn.functional as F
 
 import sys
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
@@ -203,11 +204,11 @@ class STAR():
 
     def enhance_a_video(self, input_path: str):
         # Create data loader with optimized settings
-        dataloader, input_fps = self.create_dataloader(input_path)
+        dataloader, input_fps, video_data = self.create_dataloader(input_path)
         
         # Process video with AMP if enabled
         with autocast(enabled=self.amp):
-            self.process_video(dataloader, input_fps)
+            self.process_video(dataloader, input_fps, video_data)
 
     def create_dataloader(self, input_path: str):
         """Create an optimized data loader for video processing."""
@@ -242,9 +243,9 @@ class STAR():
             shuffle=False
         )
         
-        return dataloader, input_fps
+        return dataloader, input_fps, video_data
 
-    def process_video(self, dataloader, input_fps):
+    def process_video(self, dataloader, input_fps, video_data):
         """Process video with GPU optimizations."""
         logger.info('Processing video with GPU optimizations')
         caption = "enhance video quality" + self.model.positive_prompt
@@ -411,7 +412,7 @@ def main():
     model = VideoToVideo_sr(EasyDict(model_path=model_path))
     
     # Create data loader with optimized settings
-    dataloader, input_fps = create_dataloader(
+    dataloader, input_fps, video_data = create_dataloader(
         input_path,
         batch_size=batch_size,
         num_workers=num_workers,
@@ -429,7 +430,9 @@ def main():
             resize_short_edge,
             denoise_level,
             preserve_details,
-            device
+            device,
+            video_data,
+            input_fps
         )
 
 def load_model(model_path, device):
@@ -440,7 +443,7 @@ def create_dataloader(input_path, batch_size, num_workers, pin_memory):
     # Create optimized data loader implementation here
     pass
 
-def process_video(model, dataloader, output_path, max_chunk_len, frame_stride, resize_short_edge, denoise_level, preserve_details, device):
+def process_video(model, dataloader, output_path, max_chunk_len, frame_stride, resize_short_edge, denoise_level, preserve_details, device, video_data, input_fps):
     # Video processing implementation here
     pass
 

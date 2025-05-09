@@ -21,6 +21,14 @@ import torch
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Configure logging to file
+log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend.log')
+file_handler = logging.FileHandler(log_file)
+formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+logger.setLevel(logging.INFO)
+
 app = Flask(__name__)
 app.config.from_object(Config)
 Config.init_app(app)
@@ -230,8 +238,10 @@ def get_star_args(settings):
         raise
 
 def process_video(task_id, input_path, output_path, settings):
-    """Process video with progress tracking and error handling"""
+    logger.info(f'--- Entered process_video for task {task_id} ---')
     try:
+        logger.info(f'--- Processing started for task {task_id} ---')
+        logger.info(f'Input path: {input_path}, Output path: {output_path}, Settings: {settings}')
         # Ensure upload and processed directories exist
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
         os.makedirs(app.config['PROCESSED_FOLDER'], exist_ok=True)
@@ -310,18 +320,19 @@ def process_video(task_id, input_path, output_path, settings):
             raise Exception(error_msg)
             
     except Exception as e:
-        logger.error(f"Error processing video for task {task_id}: {str(e)}")
-        logger.error(f"Full traceback: {traceback.format_exc()}")
+        logger.error(f'Exception at very start of process_video for task {task_id}: {str(e)}')
+        logger.error(f'Full traceback: {traceback.format_exc()}')
         tasks[task_id]['status'] = 'error'
         tasks[task_id]['error'] = str(e)
     finally:
-        # Clean up input file
         try:
             if os.path.exists(input_path):
                 os.remove(input_path)
+                logger.info(f'Input file {input_path} removed after processing.')
         except Exception as e:
-            logger.error(f"Error cleaning up input file: {str(e)}")
-            logger.error(f"Full traceback: {traceback.format_exc()}")
+            logger.error(f'Error cleaning up input file: {str(e)}')
+            logger.error(f'Full traceback: {traceback.format_exc()}')
+        logger.info(f'Processing complete for task {task_id}')
 
 @app.route('/')
 def index():
@@ -329,8 +340,10 @@ def index():
 
 @app.route('/api/upload', methods=['POST'])
 def upload_video():
-    """Handle video upload with validation and error handling"""
+    logger.info('--- Upload request received ---')
     try:
+        logger.info(f'Request form: {request.form}')
+        logger.info(f'Request files: {request.files}')
         # Clean up old tasks
         cleanup_old_tasks()
         
@@ -379,22 +392,24 @@ def upload_video():
             'settings': settings
         }
         
-        # Start processing in background
+        logger.info(f'File saved to: {input_path}')
+        logger.info(f'Task ID: {task_id}, Settings: {settings}')
+        logger.info(f'Starting processing thread for task {task_id}')
         thread = threading.Thread(
             target=process_video,
             args=(task_id, input_path, output_path, settings)
         )
-        thread.daemon = True  # Make thread daemon so it doesn't block application shutdown
+        thread.daemon = True
         thread.start()
-        
+        logger.info(f'Upload successful for task {task_id}')
         return jsonify({
             'taskId': task_id,
             'message': 'Video upload successful, processing started'
         })
         
     except Exception as e:
-        logger.error(f"Error handling upload: {str(e)}")
-        logger.error(f"Full traceback: {traceback.format_exc()}")
+        logger.error(f'Error handling upload: {str(e)}')
+        logger.error(f'Full traceback: {traceback.format_exc()}')
         return jsonify({'error': 'Server error processing upload'}), 500
 
 @app.route('/api/status/<task_id>', methods=['GET'])
@@ -471,82 +486,6 @@ def method_not_allowed(e):
 def test_page():
     return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'test.html')
 
-@app.route('/api/process', methods=['POST'])
-def process_video():
-    """Process the uploaded video with progress tracking and partial save support."""
-    try:
-        settings = request.json
-        if not settings:
-            return jsonify({'error': 'No settings provided'}), 400
-
-        input_path = os.path.join(app.config['UPLOAD_FOLDER'], 'input.mp4')
-        if not os.path.exists(input_path):
-            return jsonify({'error': 'No video file found'}), 400
-
-        # Get STAR arguments
-        star_args = get_star_args(settings)
-        output_path = os.path.join(app.config['PROCESSED_FOLDER'], 'output.mp4')
-        
-        # Initialize video processor
-        model = load_model(star_args)  # You'll need to implement this
-        processor = VideoProcessor(model, device='cuda' if torch.cuda.is_available() else 'cpu')
-        
-        try:
-            # Start processing in a background thread
-            thread = threading.Thread(target=processor.process_video, 
-                                   args=(input_path, output_path))
-            thread.start()
-            
-            return jsonify({
-                'message': 'Video processing started',
-                'task_id': str(uuid.uuid4())
-            }), 202
-            
-        except Exception as e:
-            logger.error(f"Error in video processing: {str(e)}")
-            logger.error(f"Full traceback: {traceback.format_exc()}")
-            return jsonify({'error': f'Error processing video: {str(e)}'}), 500
-            
-    except Exception as e:
-        logger.error(f"Error in process_video endpoint: {str(e)}")
-        logger.error(f"Full traceback: {traceback.format_exc()}")
-        return jsonify({'error': f'Error processing video: {str(e)}'}), 500
-
-def get_video_info(input_path):
-    """Get video information including total frames and FPS"""
-    try:
-        if not check_ffmpeg():
-            raise Exception("FFmpeg is not installed or not accessible")
-            
-        cmd = [
-            'ffmpeg',
-            '-i', input_path,
-            '-f', 'null',
-            '-'
-        ]
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        
-        # Extract FPS and total frames from ffmpeg output
-        fps = None
-        total_frames = None
-        
-        for line in result.stderr.split('\n'):
-            if 'fps' in line and 'Stream' in line:
-                fps = float(line.split('fps')[0].split(',')[-1].strip())
-            if 'frame=' in line:
-                total_frames = int(line.split('frame=')[1].split()[0])
-                
-        if fps is None or total_frames is None:
-            raise Exception("Could not extract video information")
-            
-        return {
-            'fps': fps,
-            'total_frames': total_frames
-        }
-    except Exception as e:
-        logger.error(f"Error getting video info: {str(e)}")
-        raise
-
 @app.route('/api/progress/<task_id>', methods=['GET'])
 def get_progress(task_id):
     """Get the current progress of video processing."""
@@ -589,12 +528,10 @@ def calculate_remaining_time(current_frame, total_frames, fps):
 def cancel_processing(task_id):
     """Cancel video processing and save partial progress."""
     try:
-        if task_id not in active_tasks:
+        if task_id not in tasks:
             return jsonify({'error': 'Task not found'}), 404
             
-        processor = active_tasks[task_id]
-        processor.interrupt_handler.interrupted = True
-        
+        tasks[task_id]['status'] = 'cancelled'
         return jsonify({
             'message': 'Processing cancelled, saving partial progress...'
         }), 200
@@ -621,6 +558,41 @@ def get_partial_video(task_id):
     except Exception as e:
         logger.error(f"Error getting partial video: {str(e)}")
         return jsonify({'error': f'Error getting partial video: {str(e)}'}), 500
+
+def get_video_info(input_path):
+    """Get video information including total frames and FPS"""
+    try:
+        if not check_ffmpeg():
+            raise Exception("FFmpeg is not installed or not accessible")
+            
+        cmd = [
+            'ffmpeg',
+            '-i', input_path,
+            '-f', 'null',
+            '-'
+        ]
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        
+        # Extract FPS and total frames from ffmpeg output
+        fps = None
+        total_frames = None
+        
+        for line in result.stderr.split('\n'):
+            if 'fps' in line and 'Stream' in line:
+                fps = float(line.split('fps')[0].split(',')[-1].strip())
+            if 'frame=' in line:
+                total_frames = int(line.split('frame=')[1].split()[0])
+                
+        if fps is None or total_frames is None:
+            raise Exception("Could not extract video information")
+            
+        return {
+            'fps': fps,
+            'total_frames': total_frames
+        }
+    except Exception as e:
+        logger.error(f"Error getting video info: {str(e)}")
+        raise
 
 if __name__ == '__main__':
     # Check FFmpeg installation

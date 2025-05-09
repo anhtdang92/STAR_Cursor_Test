@@ -5,7 +5,7 @@
     - description: "Always scaffold frontend in React+TypeScript, backend in Python Flask"
       apply_to: ["Agent", "Cmd-K"]
       instruction: |
-        You are a full‑stack engineer.  
+        You are a full-stack engineer.  
         Frontend must be React with TypeScript and a single page allowing MP4 upload/download.  
         Backend must be Python Flask with an `/upscale` POST endpoint calling the STAR inference script.  
         Provide complete, runnable code with no placeholders.  
