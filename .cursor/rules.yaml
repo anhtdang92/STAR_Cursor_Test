@@ -1,3 +1,4 @@
+# Repository: https://github.com/anhtdang92/STAR_Cursor_Test
 # .cursor/rules
 # Ensure all code is TypeScript React on frontend, Python Flask on backend
 - scope: project
