@@ -1,56 +1,148 @@
 #!/bin/bash
 
-# Folder paths
-video_folder_path='./input/video'
-txt_file_path='./input/text/prompt.txt'
+# Set CPU thread optimization
+export OMP_NUM_THREADS=16
+export MKL_NUM_THREADS=16
 
-# Get all .mp4 files in the folder using find to handle special characters
-mapfile -t mp4_files < <(find "$video_folder_path" -type f -name "*.mp4")
+# Default values
+input_video=""
+output_video=""
+model_path=""
+scale_factor=4
+quality="balanced"
+denoise_level=0
+preserve_details=true
+frame_length=16
+frame_stride=8
+resize_short_edge=360
+device="cuda"
 
-# Print the list of MP4 files
-echo "MP4 files to be processed:"
-for mp4_file in "${mp4_files[@]}"; do
-    echo "$mp4_file"
-done
+# Get the Python path from the virtual environment
+PYTHON_PATH="$(which python)"
+if [ -z "$PYTHON_PATH" ]; then
+    # Try to find Python in the virtual environment
+    if [ -d "../../.venv" ]; then
+        if [ -f "../../.venv/Scripts/python" ]; then
+            PYTHON_PATH="../../.venv/Scripts/python"
+        elif [ -f "../../.venv/bin/python" ]; then
+            PYTHON_PATH="../../.venv/bin/python"
+        fi
+    fi
+fi
 
-# Read lines from the text file, skipping empty lines
-mapfile -t lines < <(grep -v '^\s*$' "$txt_file_path")
-
-# The number of video frames processed simultaneously during each denoising process.
-frame_length=32
-
-# Debugging output
-echo "Number of MP4 files: ${#mp4_files[@]}"
-echo "Number of lines in the text file: ${#lines[@]}"
-
-# Ensure the number of video files matches the number of lines
-if [ ${#mp4_files[@]} -ne ${#lines[@]} ]; then
-    echo "Number of MP4 files and lines in the text file do not match."
+if [ -z "$PYTHON_PATH" ]; then
+    echo "Error: Python not found. Please make sure Python is installed and in your PATH"
     exit 1
 fi
 
-# Loop through video files and corresponding lines
-for i in "${!mp4_files[@]}"; do
-    mp4_file="${mp4_files[$i]}"
-    line="${lines[$i]}"
-    
-    # Extract the filename without the extension
-    file_name=$(basename "$mp4_file" .mp4)
-    
-    echo "Processing video file: $mp4_file with prompt: $line"
-        
-    # Run Python script with parameters
-    python \
-        ./video_super_resolution/scripts/inference_sr.py \
-        --solver_mode 'fast' \
-        --steps 15 \
-        --input_path "${mp4_file}" \
-        --model_path ./pretrained_weight/model.pt \
-        --prompt "${line}" \
-        --upscale 4 \
-        --max_chunk_len ${frame_length} \
-        --file_name "${file_name}.mp4" \
-        --save_dir ./results
+echo "Using Python from: $PYTHON_PATH"
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --input_video)
+            input_video="$2"
+            shift 2
+            ;;
+        --output_video)
+            output_video="$2"
+            shift 2
+            ;;
+        --model_path)
+            model_path="$2"
+            shift 2
+            ;;
+        --scale_factor)
+            scale_factor="$2"
+            shift 2
+            ;;
+        --quality)
+            quality="$2"
+            shift 2
+            ;;
+        --denoise_level)
+            denoise_level="$2"
+            shift 2
+            ;;
+        --preserve_details)
+            preserve_details=true
+            shift
+            ;;
+        --frame_length)
+            frame_length="$2"
+            shift 2
+            ;;
+        --frame_stride)
+            frame_stride="$2"
+            shift 2
+            ;;
+        --resize_short_edge)
+            resize_short_edge="$2"
+            shift 2
+            ;;
+        --device)
+            device="$2"
+            shift 2
+            ;;
+        *)
+            echo "Unknown parameter: $1"
+            exit 1
+            ;;
+    esac
 done
 
-echo "All videos processed successfully."
+# Validate required parameters
+if [ -z "$input_video" ] || [ -z "$output_video" ] || [ -z "$model_path" ]; then
+    echo "Missing required parameters. Usage:"
+    echo "inference_sr.sh --input_video <path> --output_video <path> --model_path <path>"
+    exit 1
+fi
+
+echo "Processing video: $input_video"
+echo "Output path: $output_video"
+echo "Model path: $model_path"
+echo "Scale factor: $scale_factor"
+echo "Quality: $quality"
+echo "Frame length: $frame_length"
+echo "Frame stride: $frame_stride"
+echo "Resize short edge: $resize_short_edge"
+echo "Device: $device"
+
+# Set solver mode based on quality
+solver_mode="balanced"
+steps=20
+if [ "$quality" = "fast" ]; then
+    solver_mode="fast"
+    steps=15
+elif [ "$quality" = "quality" ]; then
+    solver_mode="quality"
+    steps=25
+fi
+
+# Run Python script with optimized parameters
+"$PYTHON_PATH" \
+    ./video_super_resolution/scripts/inference_sr.py \
+    --solver_mode "$solver_mode" \
+    --steps "$steps" \
+    --input_path "$input_video" \
+    --output_path "$output_video" \
+    --model_path "$model_path" \
+    --upscale "$scale_factor" \
+    --max_chunk_len "$frame_length" \
+    --frame_stride "$frame_stride" \
+    --resize_short_edge "$resize_short_edge" \
+    --device "$device" \
+    --denoise_level "$denoise_level" \
+    --amp \
+    --num_workers 8 \
+    --pin_memory \
+    --batch_size 1 \
+    $([ "$preserve_details" = true ] && echo "--preserve_details")
+
+if [ $? -eq 0 ]; then
+    echo "Video processed successfully"
+    exit 0
+else
+    echo "Error processing video"
+    exit 1
+fi
