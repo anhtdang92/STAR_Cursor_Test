@@ -1,11 +1,19 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { CircularProgress, Button } from '@mui/material';
 import styled from 'styled-components';
 
 interface ProcessingStatusProps {
-  status: 'idle' | 'processing' | 'completed' | 'error';
-  progress?: number;
-  message?: string;
-  className?: string;
+  taskId: string;
+  onComplete: (outputUrl: string) => void;
+}
+
+interface Progress {
+  current_frame: number;
+  total_frames: number;
+  fps: number;
+  percentage: number;
+  status: string;
+  estimated_time_remaining: number | null;
 }
 
 const Container = styled.div`
@@ -84,44 +92,143 @@ const Spinner = styled.div`
   }
 `;
 
-export const ProcessingStatus: React.FC<ProcessingStatusProps> = ({
-  status,
-  progress = 0,
-  message,
-  className
-}) => {
-  const getStatusIcon = () => {
-    switch (status) {
-      case 'processing':
-        return <Spinner />;
-      case 'completed':
-        return (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
-          </svg>
-        );
-      case 'error':
-        return (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" />
-          </svg>
-        );
-      default:
-        return null;
+const ProcessingStatus: React.FC<ProcessingStatusProps> = ({ taskId, onComplete }) => {
+  const [progress, setProgress] = useState<Progress | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [cancelled, setCancelled] = useState(false);
+
+  const formatTime = (seconds: number | null): string => {
+    if (seconds === null) return 'Calculating...';
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes}m ${remainingSeconds}s`;
+  };
+
+  useEffect(() => {
+    const pollProgress = async () => {
+      try {
+        const response = await fetch(`/api/progress/${taskId}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch progress');
+        }
+        
+        const data = await response.json();
+        setProgress(data);
+        
+        if (data.status === 'complete') {
+          onComplete(data.output_url);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      }
+    };
+
+    const interval = setInterval(pollProgress, 1000);
+    return () => clearInterval(interval);
+  }, [taskId, onComplete]);
+
+  const handleCancel = async () => {
+    try {
+      await fetch(`/api/cancel/${taskId}`, { method: 'POST' });
+      setCancelled(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to cancel processing');
     }
   };
 
+  const handleDownloadPartial = async () => {
+    try {
+      const response = await fetch(`/api/partial/${taskId}`);
+      if (!response.ok) {
+        throw new Error('No partial video available');
+      }
+      
+      // Create download link
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'partial_output.mp4';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to download partial video');
+    }
+  };
+
+  if (error) {
+    return (
+      <Container>
+        <p className="text-red-600">{error}</p>
+        {cancelled && (
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleDownloadPartial}
+            className="mt-2"
+          >
+            Download Partial Result
+          </Button>
+        )}
+      </Container>
+    );
+  }
+
+  if (!progress) {
+    return <CircularProgress />;
+  }
+
   return (
-    <Container className={className}>
-      <StatusIcon status={status}>
-        {getStatusIcon()}
-      </StatusIcon>
-      {status === 'processing' && (
-        <ProgressBar>
-          <Progress progress={progress} />
-        </ProgressBar>
-      )}
-      {message && <Message>{message}</Message>}
+    <Container>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex-1">
+          <div className="h-2 bg-gray-200 rounded">
+            <div
+              className="h-2 bg-blue-500 rounded"
+              style={{ width: `${progress.percentage}%` }}
+            />
+          </div>
+        </div>
+        <span className="ml-4">{Math.round(progress.percentage)}%</span>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-4 mt-4">
+        <div className="text-sm text-gray-600">
+          <div className="font-semibold">Frame Progress</div>
+          <div>Frame {progress.current_frame.toLocaleString()} of {progress.total_frames.toLocaleString()}</div>
+        </div>
+        
+        <div className="text-sm text-gray-600">
+          <div className="font-semibold">Video Information</div>
+          <div>FPS: {progress.fps.toFixed(2)}</div>
+          <div>Time Remaining: {formatTime(progress.estimated_time_remaining)}</div>
+        </div>
+      </div>
+      
+      <div className="mt-4 flex justify-between">
+        <Button
+          variant="contained"
+          color="secondary"
+          onClick={handleCancel}
+          disabled={cancelled}
+        >
+          {cancelled ? 'Cancelled' : 'Cancel'}
+        </Button>
+        
+        {cancelled && (
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleDownloadPartial}
+          >
+            Download Partial Result
+          </Button>
+        )}
+      </div>
     </Container>
   );
-}; 
+};
+
+export default ProcessingStatus; 

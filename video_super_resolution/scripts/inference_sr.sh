@@ -107,7 +107,7 @@ echo "Frame length: $frame_length"
 echo "Frame stride: $frame_stride"
 echo "Resize short edge: $resize_short_edge"
 echo "Device: $device"
-
+    
 # Set solver mode based on quality
 solver_mode="balanced"
 steps=20
@@ -118,10 +118,10 @@ elif [ "$quality" = "quality" ]; then
     solver_mode="quality"
     steps=25
 fi
-
+        
 # Run Python script with optimized parameters
 "$PYTHON_PATH" \
-    ./video_super_resolution/scripts/inference_sr.py \
+        ./video_super_resolution/scripts/inference_sr.py \
     --solver_mode "$solver_mode" \
     --steps "$steps" \
     --input_path "$input_video" \

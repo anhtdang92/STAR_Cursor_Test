@@ -7,6 +7,9 @@ import json
 from typing import Any, Dict, List, Mapping, Tuple
 from easydict import EasyDict
 from pathlib import Path
+import cv2
+import signal
+from tqdm import tqdm
 
 import sys
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
@@ -22,6 +25,135 @@ logger = get_logger()
 
 # Set PyTorch thread optimization
 torch.set_num_threads(16)
+
+class GracefulInterruptHandler:
+    def __init__(self):
+        self.interrupted = False
+        signal.signal(signal.SIGINT, self.signal_handler)
+        signal.signal(signal.SIGTERM, self.signal_handler)
+
+    def signal_handler(self, signum, frame):
+        logger.info("Received interrupt signal. Will try to save partial progress...")
+        self.interrupted = True
+
+def save_partial_video(processed_frames, output_path, fps):
+    """Save processed frames as a video, even if processing is incomplete."""
+    if not processed_frames:
+        logger.warning("No frames to save")
+        return
+    
+    try:
+        height, width = processed_frames[0].shape[:2]
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+        
+        for frame in processed_frames:
+            out.write(frame)
+        
+        out.release()
+        logger.info(f"Saved partial video with {len(processed_frames)} frames to {output_path}")
+    except Exception as e:
+        logger.error(f"Error saving partial video: {str(e)}")
+
+class VideoProcessor:
+    def __init__(self, model, device):
+        self.model = model
+        self.device = device
+        self.interrupt_handler = GracefulInterruptHandler()
+        self.processed_frames = []
+        self.current_frame = 0
+        self.total_frames = 0
+        self.fps = 0
+
+    def process_video(self, input_path, output_path, chunk_size=16):
+        """Process video with progress tracking and partial saving support."""
+        try:
+            # Get video info
+            cap = cv2.VideoCapture(input_path)
+            self.total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            self.fps = cap.get(cv2.CAP_PROP_FPS)
+            
+            # Progress bar setup
+            pbar = tqdm(total=self.total_frames, desc="Processing frames")
+            
+            while cap.isOpened():
+                frames_chunk = []
+                for _ in range(chunk_size):
+                    ret, frame = cap.read()
+                    if not ret:
+                        break
+                    frames_chunk.append(frame)
+                    self.current_frame += 1
+                
+                if not frames_chunk:
+                    break
+                
+                # Process chunk
+                try:
+                    processed_chunk = self.process_chunk(frames_chunk)
+                    self.processed_frames.extend(processed_chunk)
+                    pbar.update(len(frames_chunk))
+                    
+                    # Save progress periodically (every 100 frames)
+                    if len(self.processed_frames) % 100 == 0:
+                        temp_output = output_path.replace('.mp4', '_partial.mp4')
+                        save_partial_video(self.processed_frames, temp_output, self.fps)
+                        
+                except Exception as e:
+                    logger.error(f"Error processing chunk: {str(e)}")
+                    if self.processed_frames:
+                        self.save_progress(output_path)
+                    raise
+                
+                # Check for interruption
+                if self.interrupt_handler.interrupted:
+                    logger.info("Processing interrupted, saving progress...")
+                    self.save_progress(output_path)
+                    break
+            
+            pbar.close()
+            cap.release()
+            
+            # Save final video if not interrupted
+            if not self.interrupt_handler.interrupted:
+                save_partial_video(self.processed_frames, output_path, self.fps)
+                
+        except Exception as e:
+            logger.error(f"Error processing video: {str(e)}")
+            if self.processed_frames:
+                self.save_progress(output_path)
+            raise
+            
+    def process_chunk(self, frames):
+        """Process a chunk of frames using the model."""
+        try:
+            # Convert frames to tensor and process
+            frames_tensor = self.prepare_frames(frames)
+            with torch.no_grad():
+                processed_tensor = self.model(frames_tensor)
+            
+            # Convert back to numpy arrays
+            processed_frames = self.tensor_to_frames(processed_tensor)
+            return processed_frames
+            
+        except Exception as e:
+            logger.error(f"Error in process_chunk: {str(e)}")
+            raise
+            
+    def save_progress(self, output_path):
+        """Save current progress when interrupted."""
+        if self.processed_frames:
+            partial_output = output_path.replace('.mp4', '_partial.mp4')
+            save_partial_video(self.processed_frames, partial_output, self.fps)
+            logger.info(f"Saved {len(self.processed_frames)}/{self.total_frames} frames")
+            
+    def get_progress(self):
+        """Get current processing progress."""
+        return {
+            'current_frame': self.current_frame,
+            'total_frames': self.total_frames,
+            'percentage': (self.current_frame / self.total_frames * 100) if self.total_frames > 0 else 0
+        }
 
 class STAR():
     def __init__(

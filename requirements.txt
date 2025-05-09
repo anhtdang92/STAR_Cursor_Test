@@ -1,12 +1,12 @@
 accelerate
-torch>=2.1.0+cu121
-torchvision>=0.16.0+cu121
-torchaudio>=2.1.0+cu121
+torch>=2.1.0
+torchvision>=0.16.0
+torchaudio>=2.1.0
 opencv-python>=4.10.0.84
 easydict>=1.13
 einops>=0.8.0
 open-clip-torch>=2.20.0
-xformers>=0.0.22.post7+cu121
+xformers>=0.0.22.post7
 fairscale>=0.4.13
 torchsde>=0.2.6
 pytorch-lightning>=2.0.1

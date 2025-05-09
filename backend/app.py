@@ -471,6 +471,157 @@ def method_not_allowed(e):
 def test_page():
     return send_from_directory(os.path.dirname(os.path.abspath(__file__)), 'test.html')
 
+@app.route('/api/process', methods=['POST'])
+def process_video():
+    """Process the uploaded video with progress tracking and partial save support."""
+    try:
+        settings = request.json
+        if not settings:
+            return jsonify({'error': 'No settings provided'}), 400
+
+        input_path = os.path.join(app.config['UPLOAD_FOLDER'], 'input.mp4')
+        if not os.path.exists(input_path):
+            return jsonify({'error': 'No video file found'}), 400
+
+        # Get STAR arguments
+        star_args = get_star_args(settings)
+        output_path = os.path.join(app.config['PROCESSED_FOLDER'], 'output.mp4')
+        
+        # Initialize video processor
+        model = load_model(star_args)  # You'll need to implement this
+        processor = VideoProcessor(model, device='cuda' if torch.cuda.is_available() else 'cpu')
+        
+        try:
+            # Start processing in a background thread
+            thread = threading.Thread(target=processor.process_video, 
+                                   args=(input_path, output_path))
+            thread.start()
+            
+            return jsonify({
+                'message': 'Video processing started',
+                'task_id': str(uuid.uuid4())
+            }), 202
+            
+        except Exception as e:
+            logger.error(f"Error in video processing: {str(e)}")
+            logger.error(f"Full traceback: {traceback.format_exc()}")
+            return jsonify({'error': f'Error processing video: {str(e)}'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error in process_video endpoint: {str(e)}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        return jsonify({'error': f'Error processing video: {str(e)}'}), 500
+
+def get_video_info(input_path):
+    """Get video information including total frames and FPS"""
+    try:
+        if not check_ffmpeg():
+            raise Exception("FFmpeg is not installed or not accessible")
+            
+        cmd = [
+            'ffmpeg',
+            '-i', input_path,
+            '-f', 'null',
+            '-'
+        ]
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        
+        # Extract FPS and total frames from ffmpeg output
+        fps = None
+        total_frames = None
+        
+        for line in result.stderr.split('\n'):
+            if 'fps' in line and 'Stream' in line:
+                fps = float(line.split('fps')[0].split(',')[-1].strip())
+            if 'frame=' in line:
+                total_frames = int(line.split('frame=')[1].split()[0])
+                
+        if fps is None or total_frames is None:
+            raise Exception("Could not extract video information")
+            
+        return {
+            'fps': fps,
+            'total_frames': total_frames
+        }
+    except Exception as e:
+        logger.error(f"Error getting video info: {str(e)}")
+        raise
+
+@app.route('/api/progress/<task_id>', methods=['GET'])
+def get_progress(task_id):
+    """Get the current progress of video processing."""
+    try:
+        if task_id not in tasks:
+            return jsonify({'error': 'Task not found'}), 404
+            
+        task = tasks[task_id]
+        
+        # Get video info if not already stored
+        if 'video_info' not in task:
+            task['video_info'] = get_video_info(task['input_path'])
+        
+        return jsonify({
+            'current_frame': task.get('current_frame', 0),
+            'total_frames': task['video_info']['total_frames'],
+            'fps': task['video_info']['fps'],
+            'percentage': task['progress'],
+            'status': task['status'],
+            'estimated_time_remaining': calculate_remaining_time(
+                task.get('current_frame', 0),
+                task['video_info']['total_frames'],
+                task['video_info']['fps']
+            )
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting progress: {str(e)}")
+        return jsonify({'error': f'Error getting progress: {str(e)}'}), 500
+
+def calculate_remaining_time(current_frame, total_frames, fps):
+    """Calculate estimated time remaining in seconds"""
+    if current_frame == 0 or fps == 0:
+        return None
+    
+    frames_remaining = total_frames - current_frame
+    return frames_remaining / fps
+
+@app.route('/api/cancel/<task_id>', methods=['POST'])
+def cancel_processing(task_id):
+    """Cancel video processing and save partial progress."""
+    try:
+        if task_id not in active_tasks:
+            return jsonify({'error': 'Task not found'}), 404
+            
+        processor = active_tasks[task_id]
+        processor.interrupt_handler.interrupted = True
+        
+        return jsonify({
+            'message': 'Processing cancelled, saving partial progress...'
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error cancelling processing: {str(e)}")
+        return jsonify({'error': f'Error cancelling processing: {str(e)}'}), 500
+
+@app.route('/api/partial/<task_id>', methods=['GET'])
+def get_partial_video(task_id):
+    """Get the partially processed video if available."""
+    try:
+        partial_path = os.path.join(app.config['PROCESSED_FOLDER'], f'output_partial.mp4')
+        if not os.path.exists(partial_path):
+            return jsonify({'error': 'No partial video available'}), 404
+            
+        return send_file(
+            partial_path,
+            mimetype='video/mp4',
+            as_attachment=True,
+            download_name='partial_output.mp4'
+        )
+        
+    except Exception as e:
+        logger.error(f"Error getting partial video: {str(e)}")
+        return jsonify({'error': f'Error getting partial video: {str(e)}'}), 500
+
 if __name__ == '__main__':
     # Check FFmpeg installation
     if not check_ffmpeg():
