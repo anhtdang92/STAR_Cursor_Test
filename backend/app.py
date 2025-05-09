@@ -16,6 +16,7 @@ from config import Config
 import sys
 import traceback
 import torch
+from pathlib import Path
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -32,10 +33,49 @@ logger.setLevel(logging.INFO)
 app = Flask(__name__)
 app.config.from_object(Config)
 Config.init_app(app)
-CORS(app)
+CORS(app, resources={
+    r"/*": {
+        "origins": ["http://localhost:3000"],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"]
+    }
+})
 
 # Task status tracking with more detailed information
-tasks = {}
+TASKS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tasks.json')
+
+def load_tasks():
+    """Load tasks from JSON file"""
+    try:
+        if os.path.exists(TASKS_FILE):
+            with open(TASKS_FILE, 'r') as f:
+                tasks_data = json.load(f)
+                # Convert string timestamps back to datetime objects
+                for task_id, task in tasks_data.items():
+                    if 'created_at' in task:
+                        task['created_at'] = datetime.fromisoformat(task['created_at'])
+                return tasks_data
+    except Exception as e:
+        logger.error(f"Error loading tasks: {str(e)}")
+    return {}
+
+def save_tasks():
+    """Save tasks to JSON file"""
+    try:
+        tasks_data = {}
+        for task_id, task in tasks.items():
+            task_copy = task.copy()
+            if 'created_at' in task_copy:
+                task_copy['created_at'] = task_copy['created_at'].isoformat()
+            tasks_data[task_id] = task_copy
+        
+        with open(TASKS_FILE, 'w') as f:
+            json.dump(tasks_data, f, indent=2)
+    except Exception as e:
+        logger.error(f"Error saving tasks: {str(e)}")
+
+# Load tasks on startup
+tasks = load_tasks()
 
 # Configuration
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
@@ -160,6 +200,7 @@ def cleanup_old_tasks():
                 del tasks[task_id]
             except Exception as e:
                 logger.error(f"Error cleaning up task {task_id}: {str(e)}")
+    save_tasks()  # Save after cleanup
 
 def allowed_file(filename):
     """Check if the file is allowed"""
@@ -195,22 +236,22 @@ def get_video_duration(input_path):
         logger.error(f"Full traceback: {traceback.format_exc()}")
         raise Exception(f"Error getting video duration: {str(e)}")
 
-def get_star_args(settings):
+def get_star_args(settings, input_path, output_path):
     """Convert frontend settings to STAR model arguments"""
     try:
         # Validate scale factor
-        scale_factor = int(settings.get('scaleFactor', 4))
+        scale_factor = int(settings.get('upscaleFactor', 4))
         if scale_factor not in [2, 4, 8]:
             logger.warning(f"Invalid scale factor {scale_factor}, defaulting to 4")
             scale_factor = 4
 
         # Map model names to their corresponding paths
         model_map = {
-            'Artemis': 'artemis.pth',
-            'Gaia': 'gaia.pth',
-            'Theia': 'theia.pth'
+            'artemis': 'artemis.pth',
+            'gaia': 'gaia.pth',
+            'theia': 'theia.pth'
         }
-        model_name = settings.get('model', 'Artemis')
+        model_name = settings.get('model', 'artemis').lower()
         model_file = model_map.get(model_name, 'artemis.pth')
 
         # Get other settings
@@ -218,8 +259,8 @@ def get_star_args(settings):
         preserve_details = settings.get('enhanceDetails', True)
 
         return [
-            '--input_path', os.path.join(UPLOAD_FOLDER, 'input.mp4'),
-            '--output_path', os.path.join(PROCESSED_FOLDER, 'output.mp4'),
+            '--input_path', input_path,
+            '--output_path', output_path,
             '--model_path', MODEL_PATH,
             '--upscale', str(scale_factor),
             '--denoise_level', str(denoise_level),
@@ -228,7 +269,6 @@ def get_star_args(settings):
             '--num_workers', '8',
             '--pin_memory',
             '--batch_size', '1',
-            '--frame_length', '16',
             '--frame_stride', '8',
             '--resize_short_edge', '360'
         ] + (['--preserve_details'] if preserve_details else [])
@@ -248,6 +288,7 @@ def process_video(task_id, input_path, output_path, settings):
         
         tasks[task_id]['status'] = 'processing'
         tasks[task_id]['progress'] = 0
+        save_tasks()  # Save after updating status
         
         # Get video duration for progress calculation
         duration = get_video_duration(input_path)
@@ -255,7 +296,7 @@ def process_video(task_id, input_path, output_path, settings):
             raise Exception("Could not determine video duration")
         
         # Get STAR model arguments from settings
-        star_args = get_star_args(settings)
+        star_args = get_star_args(settings, input_path, output_path)
         
         # Construct the full command
         script_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -288,6 +329,7 @@ def process_video(task_id, input_path, output_path, settings):
                 expected_size = os.path.getsize(input_path) * settings.get('scale', 4)
                 progress = min(95, (current_size / expected_size) * 100)
                 tasks[task_id]['progress'] = progress
+                save_tasks()  # Save after updating progress
                 
             time.sleep(1)
         
@@ -303,6 +345,7 @@ def process_video(task_id, input_path, output_path, settings):
                 tasks[task_id]['status'] = 'complete'
                 tasks[task_id]['progress'] = 100
                 tasks[task_id]['download_url'] = f'/api/download/{task_id}'
+                save_tasks()  # Save after completing task
                 logger.info(f"Video processing completed successfully for task {task_id}")
             else:
                 error_msg = "Output file not found or empty after processing"
@@ -324,6 +367,7 @@ def process_video(task_id, input_path, output_path, settings):
         logger.error(f'Full traceback: {traceback.format_exc()}')
         tasks[task_id]['status'] = 'error'
         tasks[task_id]['error'] = str(e)
+        save_tasks()  # Save after error
     finally:
         try:
             if os.path.exists(input_path):
@@ -340,6 +384,8 @@ def index():
 
 @app.route('/api/upload', methods=['POST'])
 def upload_video():
+    # Clear the backend log file at the start of each upload
+    open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend.log'), 'w').close()
     logger.info('--- Upload request received ---')
     try:
         logger.info(f'Request form: {request.form}')
@@ -391,6 +437,7 @@ def upload_video():
             'filename': filename,
             'settings': settings
         }
+        save_tasks()  # Save after adding new task
         
         logger.info(f'File saved to: {input_path}')
         logger.info(f'Task ID: {task_id}, Settings: {settings}')

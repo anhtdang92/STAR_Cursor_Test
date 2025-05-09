@@ -2,8 +2,8 @@ import React, { useState, useCallback } from 'react';
 import styled from 'styled-components';
 import { VideoUpload } from './components/VideoUpload';
 import { VideoPlayer } from './components/VideoPlayer';
-import { ProcessingStatus } from './components/ProcessingStatus';
-import { ProcessingSettings, ProcessingSettings as ProcessingSettingsType } from './components/ProcessingSettings';
+import ProcessingStatus from './components/ProcessingStatus';
+import ProcessingSettingsComponent, { ProcessingSettings } from './components/ProcessingSettings';
 import axios from 'axios';
 
 const AppContainer = styled.div`
@@ -42,7 +42,28 @@ const Title = styled.h1`
   text-align: center;
 `;
 
-const initialSettings: ProcessingSettingsType = {
+const ProcessButton = styled.button`
+  background: #007AFF;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  
+  &:hover {
+    background: #0056b3;
+  }
+  
+  &:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+`;
+
+const initialSettings: ProcessingSettings = {
   upscaleFactor: 2,
   model: 'artemis',
   denoiseLevel: 50,
@@ -54,13 +75,15 @@ function App() {
   const [videoUrl, setVideoUrl] = useState<string>('');
   const [processingStatus, setProcessingStatus] = useState<'idle' | 'processing' | 'completed' | 'error'>('idle');
   const [processingProgress, setProcessingProgress] = useState(0);
-  const [settings, setSettings] = useState<ProcessingSettingsType>(initialSettings);
+  const [error, setError] = useState<string | undefined>();
+  const [settings, setSettings] = useState<ProcessingSettings>(initialSettings);
 
   const handleUpload = useCallback(async (file: File) => {
     setVideoFile(file);
     setVideoUrl(URL.createObjectURL(file));
     setProcessingStatus('idle');
     setProcessingProgress(0);
+    setError(undefined);
   }, []);
 
   const handleProcess = useCallback(async () => {
@@ -68,13 +91,14 @@ function App() {
 
     setProcessingStatus('processing');
     setProcessingProgress(0);
+    setError(undefined);
 
     const formData = new FormData();
     formData.append('video', videoFile);
     formData.append('settings', JSON.stringify(settings));
 
     try {
-      const response = await axios.post('http://localhost:5000/process', formData, {
+      const response = await axios.post('http://localhost:5000/api/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -90,10 +114,12 @@ function App() {
         setVideoUrl(response.data.processedVideoUrl);
       } else {
         setProcessingStatus('error');
+        setError(response.data.error || 'Processing failed');
       }
     } catch (error) {
       console.error('Error processing video:', error);
       setProcessingStatus('error');
+      setError(error instanceof Error ? error.message : 'An error occurred during processing');
     }
   }, [videoFile, settings]);
 
@@ -108,19 +134,22 @@ function App() {
           )}
         </LeftColumn>
         <RightColumn>
-          <ProcessingSettings
+          <ProcessingSettingsComponent
             settings={settings}
             onChange={setSettings}
           />
+          {videoFile && (
+            <ProcessButton
+              onClick={handleProcess}
+              disabled={processingStatus === 'processing'}
+            >
+              {processingStatus === 'processing' ? 'Processing...' : 'Process Video'}
+            </ProcessButton>
+          )}
           <ProcessingStatus
             status={processingStatus}
             progress={processingProgress}
-            message={
-              processingStatus === 'processing' ? 'Processing your video...' :
-              processingStatus === 'completed' ? 'Processing completed!' :
-              processingStatus === 'error' ? 'An error occurred during processing.' :
-              'Ready to process'
-            }
+            error={error}
           />
         </RightColumn>
       </Content>

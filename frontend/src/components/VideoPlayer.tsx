@@ -22,7 +22,7 @@ const Video = styled.video`
 `;
 
 interface ControlsProps {
-  isVisible: boolean;
+  $isVisible: boolean;
 }
 
 const Controls = styled.div<ControlsProps>`
@@ -35,7 +35,7 @@ const Controls = styled.div<ControlsProps>`
   display: flex;
   align-items: center;
   gap: 16px;
-  opacity: ${(props: ControlsProps) => props.isVisible ? 1 : 0};
+  opacity: ${(props: ControlsProps) => props.$isVisible ? 1 : 0};
   transition: opacity 0.3s ease;
 `;
 
@@ -197,7 +197,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, poster, className
         poster={poster}
         onClick={togglePlay}
       />
-      <Controls isVisible={showControls}>
+      <Controls $isVisible={showControls}>
         <PlayButton onClick={togglePlay}>
           {isPlaying ? (
             <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
