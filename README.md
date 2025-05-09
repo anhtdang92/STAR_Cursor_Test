@@ -1,94 +1,97 @@
-# Video Upscaler using STAR
+# Video Upscaler
 
-This application allows users to upload MP4 videos and upscale them using the STAR super-resolution model from NJU-PCALab/STAR.
+A full-stack application for AI-powered video upscaling, built with React and Flask.
 
-## Prerequisites
+## Features
 
-- Node.js 16+ and npm
+- Upload and process MP4 videos
+- Multiple upscaling options (2x, 4x, 8x)
+- AI model selection (Artemis, Gaia, Theia)
+- Denoise and detail enhancement controls
+- Real-time processing status
+- Apple-style user interface
+- Responsive design
+
+## Tech Stack
+
+### Frontend
+- React with TypeScript
+- Styled Components
+- Tailwind CSS
+- Axios for API calls
+
+### Backend
+- Python Flask
+- FFmpeg for video processing
+- STAR AI model for upscaling
+
+## Getting Started
+
+### Prerequisites
+- Node.js 16+
 - Python 3.8+
-- CUDA-compatible GPU (for STAR model inference)
+- FFmpeg
 - Git
 
-## Setup
+### Installation
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/NJU-PCALab/STAR.git
-cd STAR
+git clone <repository-url>
+cd video-upscaler
 ```
 
 2. Set up the frontend:
 ```bash
 cd frontend
 npm install
+npm start
 ```
 
 3. Set up the backend:
 ```bash
-cd ../backend
+cd backend
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
-```
-
-4. Download the STAR model:
-```bash
-# Follow instructions from NJU-PCALab/STAR to download the model
-# Update the model path in backend/app.py
-```
-
-## Running the Application
-
-1. Start the backend server:
-```bash
-cd backend
-source venv/bin/activate  # On Windows: venv\Scripts\activate
 python app.py
 ```
 
-2. Start the frontend development server:
+4. Create required directories:
 ```bash
-cd frontend
-npm start
+mkdir backend/uploads backend/processed
 ```
-
-3. Open your browser and navigate to `http://localhost:3000`
 
 ## Usage
 
-1. Click the upload area or drag and drop an MP4 video file
-2. Wait for the upload to complete
-3. The video will be processed using the STAR model
-4. Once processing is complete, click the download button to get the upscaled video
+1. Open your browser and navigate to `http://localhost:3000`
+2. Upload an MP4 video file (max 100MB)
+3. Configure processing settings
+4. Click "Process" to start upscaling
+5. Download the processed video when complete
 
-## Project Structure
+## Development
 
-```
-.
-├── frontend/
-│   ├── src/
-│   │   ├── App.tsx
-│   │   └── components/
-│   └── package.json
-├── backend/
-│   ├── app.py
-│   ├── requirements.txt
-│   └── temp/
-│       ├── uploads/
-│       └── processed/
-└── README.md
+### Running Tests
+```bash
+# Frontend tests
+cd frontend
+npm test
+
+# Backend tests
+cd backend
+python -m pytest
 ```
 
-## Notes
-
-- Maximum video file size: 500MB
-- Only MP4 files are supported
-- Processing time depends on video length and GPU capabilities
-- Temporary files are automatically cleaned up after processing
+### Building for Production
+```bash
+cd frontend
+npm run build
+```
 
 ## License
 
-This project uses the STAR model which is subject to its own license terms. Please refer to the original repository for license information.
+MIT License - see LICENSE file for details
 
 <div align="center">
     <h1>
@@ -160,16 +163,31 @@ This project uses the STAR model which is subject to its own license terms. Plea
 **VRAM requirement**: Upscaling the provided toy example by 4x, with 72 frames, a width of 426, and a height of 240, requires around 39GB of VRAM using the default settings. If you encounter an OOM problem, you can set a smaller frame_length in inference_sr.sh. We recommend using a GPU with at least 24GB of VRAM to run this project. 
 
 ```
-## git clone this repository
-git clone https://github.com/NJU-PCALab/STAR.git
-cd STAR
-
-## create an environment
-conda create -n star python=3.10
-conda activate star
-pip install -r requirements.txt
-sudo apt-get update && sudo apt-get install ffmpeg libsm6 libxext6  -y
+.
+├── frontend/
+│   ├── src/
+│   │   ├── App.tsx
+│   │   └── components/
+│   └── package.json
+├── backend/
+│   ├── app.py
+│   ├── requirements.txt
+│   └── temp/
+│       ├── uploads/
+│       └── processed/
+└── README.md
 ```
+
+## Notes
+
+- Maximum video file size: 500MB
+- Only MP4 files are supported
+- Processing time depends on video length and GPU capabilities
+- Temporary files are automatically cleaned up after processing
+
+## License
+
+This project uses the STAR model which is subject to its own license terms. Please refer to the original repository for license information.
 
 ## 🚀 Inference
 

@@ -1,154 +1,131 @@
-import React, { useState } from 'react';
-import VideoUploader from './components/VideoUploader';
-import Button from './components/Button';
-import Card from './components/Card';
-import UpscaleSettings, { UpscaleSettings as Settings } from './components/UpscaleSettings';
+import React, { useState, useCallback } from 'react';
+import styled from 'styled-components';
+import { VideoUpload } from './components/VideoUpload';
+import { VideoPlayer } from './components/VideoPlayer';
+import { ProcessingStatus } from './components/ProcessingStatus';
+import { ProcessingSettings, ProcessingSettings as ProcessingSettingsType } from './components/ProcessingSettings';
+import axios from 'axios';
 
-const App: React.FC = () => {
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [settings, setSettings] = useState<Settings>({
-    scale: 4,
-    quality: 'balanced',
-    denoiseLevel: 0,
-    preserveDetails: true
-  });
+const AppContainer = styled.div`
+  min-height: 100vh;
+  background: linear-gradient(135deg, #F5F5F7 0%, #FFFFFF 100%);
+  padding: 40px;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+`;
 
-  const handleUploadComplete = (url: string) => {
-    setDownloadUrl(url);
-    setError(null);
-  };
+const Content = styled.div`
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  align-items: start;
+`;
 
-  const handleError = (errorMessage: string) => {
-    setError(errorMessage);
-    setDownloadUrl(null);
-  };
+const LeftColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+`;
 
-  const handleReset = () => {
-    setDownloadUrl(null);
-    setError(null);
-  };
+const RightColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+`;
+
+const Title = styled.h1`
+  margin: 0 0 40px;
+  color: #1D1D1F;
+  font-size: 32px;
+  font-weight: 700;
+  text-align: center;
+`;
+
+const initialSettings: ProcessingSettingsType = {
+  upscaleFactor: 2,
+  model: 'artemis',
+  denoiseLevel: 50,
+  enhanceDetails: true,
+};
+
+function App() {
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string>('');
+  const [processingStatus, setProcessingStatus] = useState<'idle' | 'processing' | 'completed' | 'error'>('idle');
+  const [processingProgress, setProcessingProgress] = useState(0);
+  const [settings, setSettings] = useState<ProcessingSettingsType>(initialSettings);
+
+  const handleUpload = useCallback(async (file: File) => {
+    setVideoFile(file);
+    setVideoUrl(URL.createObjectURL(file));
+    setProcessingStatus('idle');
+    setProcessingProgress(0);
+  }, []);
+
+  const handleProcess = useCallback(async () => {
+    if (!videoFile) return;
+
+    setProcessingStatus('processing');
+    setProcessingProgress(0);
+
+    const formData = new FormData();
+    formData.append('video', videoFile);
+    formData.append('settings', JSON.stringify(settings));
+
+    try {
+      const response = await axios.post('http://localhost:5000/process', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          const progress = progressEvent.loaded / (progressEvent.total || 1) * 100;
+          setProcessingProgress(progress);
+        },
+      });
+
+      if (response.data.success) {
+        setProcessingStatus('completed');
+        // Handle the processed video URL
+        setVideoUrl(response.data.processedVideoUrl);
+      } else {
+        setProcessingStatus('error');
+      }
+    } catch (error) {
+      console.error('Error processing video:', error);
+      setProcessingStatus('error');
+    }
+  }, [videoFile, settings]);
 
   return (
-    <div className="min-h-screen bg-apple-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <h1 className="text-3xl font-semibold text-apple-gray-500 text-center">
-            STAR Video Upscaler
-          </h1>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="space-y-8">
-          {/* Introduction */}
-          <Card variant="default" className="p-6">
-            <h2 className="text-xl font-semibold text-apple-gray-500 mb-4">
-              Enhance Your Videos with AI
-            </h2>
-            <p className="text-apple-gray-400">
-              Upload your MP4 video and our advanced AI model will upscale it to higher quality.
-              The STAR model uses state-of-the-art technology to enhance video resolution while
-              preserving details and reducing artifacts.
-            </p>
-          </Card>
-
-          {/* Settings */}
-          <UpscaleSettings
-            settings={settings}
-            onSettingsChange={setSettings}
-          />
-
-          {/* Video Uploader */}
-          <VideoUploader
-            onUploadComplete={handleUploadComplete}
-            onError={handleError}
-            settings={settings}
-          />
-
-          {/* Error Display */}
-          {error && (
-            <div className="rounded-apple bg-red-50 p-4 border border-red-100">
-              <p className="text-red-600">{error}</p>
-              <Button
-                variant="text"
-                size="small"
-                className="mt-2"
-                onClick={handleReset}
-              >
-                Try Again
-              </Button>
-            </div>
+    <AppContainer>
+      <Title>Video Upscaler</Title>
+      <Content>
+        <LeftColumn>
+          <VideoUpload onUpload={handleUpload} />
+          {videoUrl && (
+            <VideoPlayer src={videoUrl} />
           )}
-
-          {/* Download Section */}
-          {downloadUrl && (
-            <Card variant="elevated" className="p-6 text-center">
-              <h3 className="text-xl font-semibold text-apple-gray-500 mb-4">
-                Your Video is Ready!
-              </h3>
-              <div className="space-x-4">
-                <Button
-                  href={downloadUrl}
-                  download
-                  variant="primary"
-                  size="large"
-                >
-                  Download Enhanced Video
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="large"
-                  onClick={handleReset}
-                >
-                  Process Another Video
-                </Button>
-              </div>
-            </Card>
-          )}
-
-          {/* Features */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card variant="default" className="p-6">
-              <h3 className="text-lg font-semibold text-apple-gray-500 mb-2">
-                High Quality
-              </h3>
-              <p className="text-apple-gray-400">
-                Advanced AI upscaling for crystal-clear results
-              </p>
-            </Card>
-            <Card variant="default" className="p-6">
-              <h3 className="text-lg font-semibold text-apple-gray-500 mb-2">
-                Fast Processing
-              </h3>
-              <p className="text-apple-gray-400">
-                Optimized for speed without compromising quality
-              </p>
-            </Card>
-            <Card variant="default" className="p-6">
-              <h3 className="text-lg font-semibold text-apple-gray-500 mb-2">
-                Easy to Use
-              </h3>
-              <p className="text-apple-gray-400">
-                Simple drag-and-drop interface for quick results
-              </p>
-            </Card>
-          </div>
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="bg-white border-t border-apple-gray-200 mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <p className="text-center text-apple-gray-400">
-            Powered by STAR AI Technology
-          </p>
-        </div>
-      </footer>
-    </div>
+        </LeftColumn>
+        <RightColumn>
+          <ProcessingSettings
+            settings={settings}
+            onChange={setSettings}
+          />
+          <ProcessingStatus
+            status={processingStatus}
+            progress={processingProgress}
+            message={
+              processingStatus === 'processing' ? 'Processing your video...' :
+              processingStatus === 'completed' ? 'Processing completed!' :
+              processingStatus === 'error' ? 'An error occurred during processing.' :
+              'Ready to process'
+            }
+          />
+        </RightColumn>
+      </Content>
+    </AppContainer>
   );
-};
+}
 
 export default App; 
