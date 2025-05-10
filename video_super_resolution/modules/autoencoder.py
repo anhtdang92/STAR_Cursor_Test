@@ -41,6 +41,50 @@ def suppress_output():
         sys.stderr = old_stderr
         builtins.print = old_print
 
+def _load_state_dict_silently(model, state_dict, strict=False):
+    """Load state dict without printing parameter names."""
+    with suppress_output():
+        # Temporarily disable all logging during state dict loading
+        old_level = logging.getLogger().level
+        logging.getLogger().setLevel(logging.ERROR)
+        
+        try:
+            # Create a custom state dict loader that doesn't print parameter names
+            def custom_load_state_dict(model, state_dict, strict=False):
+                missing_keys = []
+                unexpected_keys = []
+                
+                # Get model state dict
+                model_state_dict = model.state_dict()
+                
+                # Check for missing and unexpected keys
+                for key in model_state_dict.keys():
+                    if key not in state_dict:
+                        missing_keys.append(key)
+                
+                for key in state_dict.keys():
+                    if key not in model_state_dict:
+                        unexpected_keys.append(key)
+                
+                # Load matching parameters silently
+                for key, value in state_dict.items():
+                    if key in model_state_dict:
+                        model_state_dict[key].copy_(value)
+                
+                return missing_keys, unexpected_keys
+            
+            # Use custom loader instead of model.load_state_dict
+            missing_keys, unexpected_keys = custom_load_state_dict(model, state_dict, strict)
+            
+            if len(missing_keys) > 0:
+                logger.warning(f"Missing keys: {missing_keys}")
+            if len(unexpected_keys) > 0:
+                logger.warning(f"Unexpected keys: {unexpected_keys}")
+            return missing_keys, unexpected_keys
+        finally:
+            # Restore logging level
+            logging.getLogger().setLevel(old_level)
+
 class AutoencoderKLTemporalDecoder(nn.Module):
     def __init__(
         self,
@@ -124,12 +168,8 @@ class AutoencoderKLTemporalDecoder(nn.Module):
                         if k.startswith(ik):
                             logger.debug(f"Deleting key {k} from state_dict.")
                             del sd[k]
-                missing, unexpected = self.load_state_dict(sd, strict=False)
+                _load_state_dict_silently(self, sd, strict=False)
                 logger.info(f"Restored from {path}")
-                if len(missing) > 0:
-                    logger.warning(f"Missing keys: {missing}")
-                if len(unexpected) > 0:
-                    logger.warning(f"Unexpected keys: {unexpected}")
         except Exception as e:
             logger.error(f"Error loading checkpoint: {str(e)}")
             raise

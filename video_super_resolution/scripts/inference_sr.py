@@ -18,6 +18,23 @@ import sys
 import contextlib
 import io
 import builtins
+import warnings
+
+# Suppress deprecation warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=UserWarning, module="torchvision.models._utils")
+
+# Configure logging to prevent duplicate messages
+logging.getLogger().handlers = []  # Clear existing handlers
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler()]
+)
+
+# Suppress duplicate loggers
+logging.getLogger('star_diffusion.cuda').propagate = False
+logging.getLogger('video_to_video').propagate = False
 
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 sys.path.append(base_path)

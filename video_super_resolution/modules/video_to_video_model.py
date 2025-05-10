@@ -41,6 +41,73 @@ def suppress_output():
         sys.stderr = old_stderr
         builtins.print = old_print
 
+def _load_state_dict_silently(model, state_dict, strict=False):
+    """Load state dict without printing parameter names."""
+    with suppress_output():
+        # Temporarily disable all logging during state dict loading
+        old_level = logging.getLogger().level
+        logging.getLogger().setLevel(logging.ERROR)
+        
+        try:
+            # Create a custom state dict loader that doesn't print parameter names
+            def custom_load_state_dict(model, state_dict, strict=False):
+                missing_keys = []
+                unexpected_keys = []
+                
+                # Get model state dict
+                model_state_dict = model.state_dict()
+                
+                # Check for missing and unexpected keys
+                for key in model_state_dict.keys():
+                    if key not in state_dict:
+                        missing_keys.append(key)
+                
+                for key in state_dict.keys():
+                    if key not in model_state_dict:
+                        unexpected_keys.append(key)
+                
+                # Load matching parameters silently
+                for key, value in state_dict.items():
+                    if key in model_state_dict:
+                        model_state_dict[key].copy_(value)
+                
+                return missing_keys, unexpected_keys
+            
+            # Use custom loader instead of model.load_state_dict
+            missing_keys, unexpected_keys = custom_load_state_dict(model, state_dict, strict)
+            
+            if len(missing_keys) > 0:
+                logger.warning(f"Missing keys: {missing_keys}")
+            if len(unexpected_keys) > 0:
+                logger.warning(f"Unexpected keys: {unexpected_keys}")
+            return missing_keys, unexpected_keys
+        finally:
+            # Restore logging level
+            logging.getLogger().setLevel(old_level)
+
+def debug_cuda_memory():
+    """Log CUDA memory usage in a concise format."""
+    if not torch.cuda.is_available():
+        return
+        
+    device = torch.cuda.current_device()
+    memory_allocated = torch.cuda.memory_allocated(device) / 1024**2
+    memory_reserved = torch.cuda.memory_reserved(device) / 1024**2
+    total_memory = torch.cuda.get_device_properties(device).total_memory / 1024**2
+    
+    logger.info(f"CUDA Memory: {memory_allocated:.1f}MB allocated, {memory_reserved:.1f}MB reserved of {total_memory:.1f}MB total")
+
+def debug_system_resources():
+    """Log system resource usage in a concise format."""
+    if torch.cuda.is_available():
+        device = torch.cuda.current_device()
+        device_name = torch.cuda.get_device_name(device)
+        memory_used = torch.cuda.memory_allocated(device) / 1024**2
+        memory_total = torch.cuda.get_device_properties(device).total_memory / 1024**2
+        utilization = torch.cuda.utilization(device) if hasattr(torch.cuda, 'utilization') else 0
+        
+        logger.info(f"GPU: {device_name} - Memory: {memory_used:.1f}MB/{memory_total:.1f}MB - Utilization: {utilization}%")
+
 class VideoToVideo_sr(nn.Module):
     def __init__(self, cfg: Dict[str, Any]):
         super().__init__()
@@ -100,7 +167,7 @@ class VideoToVideo_sr(nn.Module):
             if cfg.model_path.endswith('.safetensors'):
                 with suppress_output():
                     state_dict = load_file(cfg.model_path)
-                    self.load_state_dict(state_dict, strict=False)
+                    _load_state_dict_silently(self, state_dict, strict=False)
             else:
                 # Try loading as PyTorch checkpoint
                 try:
@@ -114,24 +181,22 @@ class VideoToVideo_sr(nn.Module):
                             load_dict = torch.load(cfg.model_path, map_location='cpu')
                     
                     if isinstance(load_dict, dict) and 'state_dict' in load_dict:
-                        with suppress_output():
-                            self.load_state_dict(load_dict['state_dict'], strict=False)
+                        _load_state_dict_silently(self, load_dict['state_dict'], strict=False)
                     else:
-                        with suppress_output():
-                            self.load_state_dict(load_dict, strict=False)
+                        _load_state_dict_silently(self, load_dict, strict=False)
                 except Exception as e:
                     logger.error(f"Error loading model as PyTorch checkpoint: {e}")
                     raise
                     
             debug_cuda_memory()  # Log memory after loading
-            debug_model_parameters(self)  # Log model parameters
+            logger.info("Model loaded successfully")
             
         except Exception as e:
             logger.error(f"Failed to load model from {cfg.model_path}: {e}")
             raise RuntimeError(f"Model loading failed: {str(e)}")
         
         # Initialize model debugger
-        self.debugger = ModelDebugger(self) 
+        self.debugger = ModelDebugger(self)
 
     def forward(self, x):
         return self.diffusion(x)
