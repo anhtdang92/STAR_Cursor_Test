@@ -554,8 +554,15 @@ def main():
 
         # Enhance the video
         logger.info(f"Starting video enhancement for: {args.input_path}")
+        print("Starting inference_sr.py script...")
+        print(f"Input path: {args.input_path}")
+        print(f"Output path: {args.output_path}")
+        print(f"Model path: {args.model_path}")
+        print(f"Device: {args.device}")
+        print("Loading model...")
         STAR_model.enhance_a_video(args.input_path)
         logger.info(f"Video enhancement finished for: {args.input_path}")
+        print("Video processing completed.")
         logger.info("inference_sr.py main() function finished.")
     except Exception as e:
         logger.error(f"Error in main(): {str(e)}")
