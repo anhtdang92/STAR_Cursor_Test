@@ -71,7 +71,8 @@ frontend/public/
 *.dll
 
 # Cursor
-.cursor.yaml
+# .cursor.yaml  # Commented out to allow tracking
+# .cursor/      # Commented out to allow tracking
 
 # React
 /build

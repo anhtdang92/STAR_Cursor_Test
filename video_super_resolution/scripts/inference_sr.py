@@ -25,8 +25,34 @@ from video_super_resolution.color_fix import adain_color_fix
 
 from inference_utils import *
 
+# Add log level argument to parser
+def parse_args():
+    parser = ArgumentParser()
+    parser.add_argument("--input_path", type=str, required=True, help="Path to the input video file.")
+    parser.add_argument("--output_path", type=str, required=True, help="Path to save the upscaled video.")
+    parser.add_argument("--model_path", type=str, required=True, help="model path")
+    parser.add_argument("--upscale", type=int, default=4, help='up-scale factor (2, 4, or 8)')
+    parser.add_argument("--max_chunk_len", type=int, default=32, help='max chunk length for processing')
+    parser.add_argument("--solver_mode", type=str, default='fast', help='fast | balanced | quality')
+    parser.add_argument("--steps", type=int, default=15, help='number of steps')
+    parser.add_argument("--guide_scale", type=float, default=7.5, help='guidance scale for classifier-free guidance')
+    parser.add_argument("--denoise_level", type=float, default=0, help='denoise level (0-100)')
+    parser.add_argument("--preserve_details", action='store_true', help='preserve video details')
+    parser.add_argument("--frame_stride", type=int, default=8, help='frame stride for processing')
+    parser.add_argument("--resize_short_edge", type=int, default=360, help='resize short edge for processing')
+    parser.add_argument("--device", type=str, default='cuda', help='device to use (cuda or cpu)')
+    parser.add_argument("--amp", action='store_true', help='use automatic mixed precision')
+    parser.add_argument("--num_workers", type=int, default=8, help='number of workers for data loading')
+    parser.add_argument("--pin_memory", action='store_true', help='pin memory for data loading')
+    parser.add_argument("--batch_size", type=int, default=1, help='batch size for processing')
+    parser.add_argument('--log-level', type=str, default='INFO', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], help='Set logging level')
+    return parser.parse_args()
+
+args = parse_args()
+
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+log_level = getattr(logging, args.log_level.upper(), logging.INFO)
+logging.basicConfig(level=log_level)
 logger = logging.getLogger(__name__)
 
 # Configure logging to file with more detailed format
@@ -36,12 +62,14 @@ log_file = os.path.join(log_dir, f'star_{datetime.now().strftime("%Y%m%d_%H%M%S"
 file_handler = logging.FileHandler(log_file)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 file_handler.setFormatter(formatter)
+file_handler.setLevel(log_level)
 logger.addHandler(file_handler)
-logger.setLevel(logging.INFO)
+logger.setLevel(log_level)
 
-# Add console handler for immediate feedback
+# Add console handler for warnings/errors only
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(formatter)
+console_handler.setLevel(logging.WARNING)
 logger.addHandler(console_handler)
 
 logger.info(f"Logging initialized. Log file: {log_file}")
@@ -112,6 +140,8 @@ class VideoProcessor:
             
             # Progress bar setup
             pbar = tqdm(total=self.total_frames, desc="Processing frames")
+            milestone = 100  # Log every 100 frames
+            last_logged = 0
             
             while cap.isOpened():
                 frames_chunk = []
@@ -123,22 +153,26 @@ class VideoProcessor:
                     self.current_frame += 1
                 
                 if not frames_chunk:
-                    logger.info("No more frames in video to process.")
+                    logger.debug("No more frames in video to process.")
                     break
                 
-                logger.info(f"Processing chunk: current_frame = {self.current_frame}, frames in chunk = {len(frames_chunk)}")
+                logger.debug(f"Processing chunk: current_frame = {self.current_frame}, frames in chunk = {len(frames_chunk)}")
                 # Process chunk
                 try:
                     processed_chunk = self.process_chunk(frames_chunk)
                     self.processed_frames.extend(processed_chunk)
                     pbar.update(len(frames_chunk))
-                    logger.info(f"Chunk processed. Total processed_frames = {len(self.processed_frames)}")
+                    logger.debug(f"Chunk processed. Total processed_frames = {len(self.processed_frames)}")
                     
                     # Save progress periodically (every 100 frames)
-                    if len(self.processed_frames) % 100 == 0:
+                    if len(self.processed_frames) % milestone == 0:
                         logger.info(f"Reached {len(self.processed_frames)} processed frames, attempting periodic save.")
                         temp_output = output_path.replace('.mp4', '_partial.mp4')
                         save_partial_video(self.processed_frames, temp_output, self.fps)
+                        last_logged = len(self.processed_frames)
+                    elif len(self.processed_frames) - last_logged >= milestone:
+                        logger.info(f"Processed {len(self.processed_frames)} frames so far.")
+                        last_logged = len(self.processed_frames)
                         
                 except Exception as e:
                     logger.error(f"Error processing chunk: {str(e)}")
@@ -148,7 +182,7 @@ class VideoProcessor:
                 
                 # Check for interruption
                 if self.interrupt_handler.interrupted:
-                    logger.info("Processing interrupted by signal, saving progress...")
+                    logger.warning("Processing interrupted by signal, saving progress...")
                     self.save_progress(output_path)
                     break
             
@@ -161,7 +195,7 @@ class VideoProcessor:
                 logger.info("Processing complete, saving final video.")
                 save_partial_video(self.processed_frames, output_path, self.fps)
             else:
-                logger.info("Processing was interrupted, final save_partial_video call might have occurred in interruption block.")
+                logger.warning("Processing was interrupted, final save_partial_video call might have occurred in interruption block.")
                 
         except Exception as e:
             logger.error(f"Error processing video: {str(e)}")
@@ -172,18 +206,18 @@ class VideoProcessor:
     def process_chunk(self, frames):
         """Process a chunk of frames using the model."""
         try:
-            logger.info(f"VideoProcessor.process_chunk: processing {len(frames)} frames.")
+            logger.debug(f"VideoProcessor.process_chunk: processing {len(frames)} frames.")
             # Convert frames to tensor and process
             frames_tensor = self.prepare_frames(frames)
-            logger.info(f"Frames tensor prepared, shape: {frames_tensor.shape}, type: {frames_tensor.dtype}, device: {frames_tensor.device}")
+            logger.debug(f"Frames tensor prepared, shape: {frames_tensor.shape}, type: {frames_tensor.dtype}, device: {frames_tensor.device}")
             with torch.no_grad():
-                logger.info("Calling model for inference on chunk...")
+                logger.debug("Calling model for inference on chunk...")
                 processed_tensor = self.model(frames_tensor)
-                logger.info(f"Model inference complete. Processed tensor shape: {processed_tensor.shape}, type: {processed_tensor.dtype}, device: {processed_tensor.device}")
+                logger.debug(f"Model inference complete. Processed tensor shape: {processed_tensor.shape}, type: {processed_tensor.dtype}, device: {processed_tensor.device}")
             
             # Convert back to numpy arrays
             processed_frames = self.tensor_to_frames(processed_tensor)
-            logger.info(f"Processed tensor converted back to {len(processed_frames)} frames.")
+            logger.debug(f"Processed tensor converted back to {len(processed_frames)} frames.")
             return processed_frames
             
         except Exception as e:
@@ -495,30 +529,6 @@ def resize_video_chunk(chunk: torch.Tensor, short_edge: int) -> torch.Tensor:
         mode='bilinear',
         align_corners=False
     )
-
-def parse_args():
-    parser = ArgumentParser(description="Run video super-resolution inference.")
-    parser.add_argument("--input_path", type=str, required=True, help="Path to the input video file.")
-    parser.add_argument("--output_path", type=str, required=True, help="Path to save the upscaled video.")
-    parser.add_argument("--model_path", type=str, required=True, help="model path")
-    parser.add_argument("--upscale", type=int, default=4, help='up-scale factor (2, 4, or 8)')
-    parser.add_argument("--max_chunk_len", type=int, default=32, help='max chunk length for processing')
-    parser.add_argument("--solver_mode", type=str, default='fast', help='fast | balanced | quality')
-    parser.add_argument("--steps", type=int, default=15, help='number of steps')
-    parser.add_argument("--guide_scale", type=float, default=7.5, help='guidance scale for classifier-free guidance')
-    parser.add_argument("--denoise_level", type=float, default=0, help='denoise level (0-100)')
-    parser.add_argument("--preserve_details", action='store_true', help='preserve video details')
-    parser.add_argument("--frame_stride", type=int, default=8, help='frame stride for processing')
-    parser.add_argument("--resize_short_edge", type=int, default=360, help='resize short edge for processing')
-    parser.add_argument("--device", type=str, default='cuda', help='device to use (cuda or cpu)')
-    parser.add_argument("--amp", action='store_true', help='use automatic mixed precision')
-    parser.add_argument("--num_workers", type=int, default=8, help='number of workers for data loading')
-    parser.add_argument("--pin_memory", action='store_true', help='pin memory for data loading')
-    parser.add_argument("--batch_size", type=int, default=1, help='batch size for processing')
-
-    args = parser.parse_args()
-    logger.info(f"Parsed arguments: {args}")
-    return args
 
 def main():
     logger.info("inference_sr.py main() function started.")
