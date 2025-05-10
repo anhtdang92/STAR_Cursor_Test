@@ -357,18 +357,7 @@ class STAR():
         pin_memory: bool = True,
         batch_size: int = 1
     ):
-        logger.info("Initializing STAR model...")
-        print("Initializing STAR model...", flush=True)
-        logger.info(f"Output path: {output_path}")
-        logger.info(f"Model path: {model_path}")
-        logger.info(f"Device: {device}")
-        logger.info(f"CUDA available: {torch.cuda.is_available()}")
-        if torch.cuda.is_available():
-            logger.info(f"CUDA device: {torch.cuda.get_device_name(0)}")
-            logger.info(f"CUDA memory allocated: {torch.cuda.memory_allocated() / 1024**2:.2f} MB")
-            logger.info(f"CUDA memory cached: {torch.cuda.memory_reserved() / 1024**2:.2f} MB")
-        print(f"Model path: {model_path}", flush=True)
-        print(f"Device: {device}", flush=True)
+        logger.warning("Initializing STAR model...")
         
         self.output_path = output_path
         self.model_path = model_path
@@ -387,31 +376,12 @@ class STAR():
         self.pin_memory = pin_memory
         self.batch_size = batch_size
 
-        logger.info(f"STAR model parameters:")
-        logger.info(f"  solver_mode: {solver_mode}")
-        logger.info(f"  steps: {steps}")
-        logger.info(f"  guide_scale: {guide_scale}")
-        logger.info(f"  upscale: {upscale}")
-        logger.info(f"  max_chunk_len: {max_chunk_len}")
-        logger.info(f"  frame_stride: {frame_stride}")
-        logger.info(f"  resize_short_edge: {resize_short_edge}")
-        logger.info(f"  denoise_level: {denoise_level}")
-        logger.info(f"  preserve_details: {preserve_details}")
-        logger.info(f"  amp: {amp}")
-        logger.info(f"  num_workers: {num_workers}")
-        logger.info(f"  pin_memory: {pin_memory}")
-        logger.info(f"  batch_size: {batch_size}")
-
         # Enable cuDNN benchmarking for better performance
         if self.device.type == 'cuda':
-            logger.info("Enabling cuDNN benchmarking.")
             cudnn.benchmark = True
 
         # Load model
         try:
-            logger.info(f"Loading VideoToVideo_sr model from path: {model_path}")
-            print(f"Loading VideoToVideo_sr model from path: {model_path}", flush=True)
-            
             # Temporarily replace print function
             builtins.print = _suppress_print
             try:
@@ -420,55 +390,30 @@ class STAR():
                 # Restore original print function
                 builtins.print = _original_print
             
-            logger.info("VideoToVideo_sr model loaded successfully.")
-            print("VideoToVideo_sr model loaded successfully.", flush=True)
-            
-            logger.info(f"Moving model to device: {self.device}")
-            print(f"Moving model to device: {self.device}", flush=True)
             self.model.to(self.device)
-            logger.info(f"Model moved to device: {self.device}")
-            print(f"Model moved to device: {self.device}", flush=True)
-            
-            logger.info("Setting model to eval mode.")
             self.model.eval()
-            logger.info("Model initialization complete.")
-            print("Model initialization complete.", flush=True)
             
         except Exception as e:
             logger.error(f"Error initializing model: {str(e)}")
-            logger.error(f"Full traceback: {traceback.format_exc()}")
-            print(f"Error initializing model: {e}", flush=True)
-            print(traceback.format_exc(), flush=True)
             raise
 
     def enhance_a_video(self, input_path: str):
-        logger.info(f"STAR.enhance_a_video started for input: {input_path}")
         # Create data loader with optimized settings
         dataloader, input_fps, video_data = self.create_dataloader(input_path)
         
         # Process video with AMP if enabled
-        logger.info(f"Processing video with AMP enabled: {self.amp}")
         with autocast(enabled=self.amp):
             self.process_video(dataloader, input_fps, video_data)
-        logger.info(f"STAR.enhance_a_video finished for input: {input_path}")
 
     def create_dataloader(self, input_path: str):
-        logger.info(f"STAR.create_dataloader: Loading video: {input_path}")
-        print(f"STAR.create_dataloader: Loading video: {input_path}", flush=True)
         input_frames, input_fps = load_video(input_path)
-        logger.info(f"STAR.create_dataloader: Input FPS: {input_fps}, Number of frames: {len(input_frames)}")
-        print(f"STAR.create_dataloader: Input FPS: {input_fps}, Number of frames: {len(input_frames)}", flush=True)
         
         # Preprocess frames
         video_data = preprocess(input_frames)
         _, _, h, w = video_data.shape
-        logger.info(f"STAR.create_dataloader: Input resolution: {(h, w)}")
-        print(f"STAR.create_dataloader: Input resolution: {(h, w)}", flush=True)
         
         # Calculate target resolution
         target_h, target_w = h * self.upscale, w * self.upscale
-        logger.info(f"STAR.create_dataloader: Target resolution: {(target_h, target_w)}")
-        print(f"STAR.create_dataloader: Target resolution: {(target_h, target_w)}", flush=True)
         
         # Create dataset
         dataset = VideoDataset(
@@ -479,8 +424,6 @@ class STAR():
             resize_short_edge=self.resize_short_edge
         )
         
-        logger.info(f"STAR.create_dataloader: Dataset created. Max_chunk_len={self.max_chunk_len}, frame_stride={self.frame_stride}, resize_short_edge={self.resize_short_edge}")
-        print(f"STAR.create_dataloader: Dataset created. Max_chunk_len={self.max_chunk_len}, frame_stride={self.frame_stride}, resize_short_edge={self.resize_short_edge}", flush=True)
         # Create data loader with optimized settings
         dataloader = torch.utils.data.DataLoader(
             dataset,
@@ -490,15 +433,12 @@ class STAR():
             shuffle=False
         )
         
-        logger.info(f"STAR.create_dataloader: DataLoader created with batch_size={self.batch_size}, num_workers={self.num_workers}, pin_memory={self.pin_memory}")
-        print(f"STAR.create_dataloader: DataLoader created with batch_size={self.batch_size}, num_workers={self.num_workers}, pin_memory={self.pin_memory}", flush=True)
         return dataloader, input_fps, video_data
 
     def process_video(self, dataloader, input_fps, video_data):
-        logger.info(f"Starting video processing. Input FPS: {input_fps}, Total frames: {video_data.shape[0]}")
         all_output_frames = []
         original_frames_for_color_fix = []
-        pbar = tqdm(dataloader, desc="Processing video chunks")
+        pbar = tqdm(dataloader, desc="Processing video chunks", disable=True)  # Disable progress bar
         total_frames = video_data.shape[0]
         
         try:
@@ -523,17 +463,12 @@ class STAR():
                     all_output_frames.extend([frame for frame in output_chunk])
                     original_frames_for_color_fix.extend([frame for frame in original_chunk.squeeze(0).permute(1, 2, 3, 0).cpu().numpy()])
                     
-                    current_frame = min((i + 1) * self.batch_size * self.max_chunk_len, total_frames)
-                    pbar.set_postfix_str(f"Frame {current_frame}/{total_frames}")
-                    
                 except Exception as e:
                     logger.error(f"Error processing batch {i+1}: {str(e)}")
                     raise
                 
             if all_output_frames:
-                logger.info(f"Saving processed video to {self.output_path}")
                 save_video_frames(self.output_path, all_output_frames, input_fps)
-                logger.info("Video processing completed successfully")
             else:
                 logger.warning("No output frames were generated to save.")
                 
@@ -601,21 +536,15 @@ def resize_video_chunk(chunk: torch.Tensor, short_edge: int) -> torch.Tensor:
     )
 
 def main():
-    logger.info("inference_sr.py main() function started.")
-    logger.info(f"sys.argv: {sys.argv}")  # Debug: print command line arguments
     args = parse_args()
     
     # Update model path to be relative to the script location
     if not os.path.isabs(args.model_path):
         args.model_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), args.model_path)
     
-    logger.info(f"Using model path: {args.model_path}")
-    
     setup_seed(42)
-    logger.info("Seed set to 42.")
 
     # Create STAR model instance
-    logger.info("Initializing STAR model...")
     try:
         STAR_model = STAR(
             output_path=args.output_path,
@@ -635,25 +564,12 @@ def main():
             pin_memory=args.pin_memory,
             batch_size=args.batch_size
         )
-        logger.info("STAR model initialized successfully.")
 
         # Enhance the video
-        logger.info(f"Starting video enhancement for: {args.input_path}")
-        print("Starting inference_sr.py script...")
-        print(f"Input path: {args.input_path}")
-        print(f"Output path: {args.output_path}")
-        print(f"Model path: {args.model_path}")
-        print(f"Device: {args.device}")
-        print("Loading model...")
         STAR_model.enhance_a_video(args.input_path)
-        logger.info(f"Video enhancement finished for: {args.input_path}")
-        print("Video processing completed.")
-        logger.info("inference_sr.py main() function finished.")
+        
     except Exception as e:
         logger.error(f"Error in main(): {str(e)}")
-        logger.error(f"Full traceback: {traceback.format_exc()}")
-        print(f"Fatal error: {e}", flush=True)
-        print(traceback.format_exc(), flush=True)
         sys.exit(1)
 
 if __name__ == "__main__":
@@ -661,9 +577,6 @@ if __name__ == "__main__":
         main()
     except Exception as e:
         logger.error(f"Fatal error: {str(e)}")
-        logger.error(f"Full traceback: {traceback.format_exc()}")
-        print(f"Fatal error: {e}", flush=True)
-        print(traceback.format_exc(), flush=True)
         sys.exit(1)
 
 def load_model(model_path, device='cuda'):

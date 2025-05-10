@@ -127,9 +127,12 @@ class VideoToVideo_sr(nn.Module):
         super().__init__()
         self.cfg = cfg
         
-        # Log system and CUDA information
-        debug_system_resources()
-        debug_cuda_memory()
+        # Only log critical system info
+        if torch.cuda.is_available():
+            device = torch.cuda.current_device()
+            memory_used = torch.cuda.memory_allocated(device) / 1024**2
+            memory_total = torch.cuda.get_device_properties(device).total_memory / 1024**2
+            logger.warning(f"GPU Memory: {memory_used:.1f}MB/{memory_total:.1f}MB")
         
         # Initialize autoencoder
         autoencoder_config = {
@@ -156,27 +159,23 @@ class VideoToVideo_sr(nn.Module):
             }
         }
         
-        logger.info("Initializing autoencoder...")
-        self.autoencoder = AutoencoderKLTemporalDecoder(
-            ddconfig=autoencoder_config,
-            embed_dim=4,
-            ckpt_path=None
-        )
-        
-        # Initialize diffusion model
-        logger.info("Initializing diffusion model...")
-        self.diffusion = GaussianDiffusion(
-            denoise_fn=self.autoencoder,
-            schedule=noise_schedule(timesteps=1000),
-            timesteps=1000,
-            loss_type='l2'
-        )
+        with suppress_output():
+            self.autoencoder = AutoencoderKLTemporalDecoder(
+                ddconfig=autoencoder_config,
+                embed_dim=4,
+                ckpt_path=None
+            )
+            
+            # Initialize diffusion model
+            self.diffusion = GaussianDiffusion(
+                denoise_fn=self.autoencoder,
+                schedule=noise_schedule(timesteps=1000),
+                timesteps=1000,
+                loss_type='l2'
+            )
         
         # Load model weights with better error handling and debugging
         try:
-            logger.info(f"Loading model weights from {cfg.model_path}")
-            debug_cuda_memory()  # Log memory before loading
-            
             # First try loading as safetensors
             if cfg.model_path.endswith('.safetensors'):
                 with suppress_output():
@@ -202,9 +201,6 @@ class VideoToVideo_sr(nn.Module):
                     logger.error(f"Error loading model as PyTorch checkpoint: {e}")
                     raise
                     
-            debug_cuda_memory()  # Log memory after loading
-            logger.info("Model loaded successfully")
-            
         except Exception as e:
             logger.error(f"Failed to load model from {cfg.model_path}: {e}")
             raise RuntimeError(f"Model loading failed: {str(e)}")
