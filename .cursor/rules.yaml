@@ -3,10 +3,48 @@
 # Ensure all code is TypeScript React on frontend, Python Flask on backend
 - scope: project
   rules:
-    - description: "Always scaffold frontend in React+TypeScript, backend in Python Flask"
+    - description: "Frontend must be React with TypeScript, backend must be Python Flask"
       apply_to: ["Agent", "Cmd-K"]
       instruction: |
-        You are a full-stack engineer.  
-        Frontend must be React with TypeScript and a single page allowing MP4 upload/download.  
-        Backend must be Python Flask with an `/upscale` POST endpoint calling the STAR inference script.  
-        Provide complete, runnable code with no placeholders.  
+        You are a full-stack engineer.
+        - Frontend: React with TypeScript, single-page app for MP4 upload/download, progress display.
+        - Backend: Python Flask, with endpoints:
+            - POST /api/upload (video upload)
+            - GET /api/status/<task_id> (status)
+            - GET /api/download/<task_id> (download)
+            - GET /api/progress/<task_id> (progress)
+            - POST /api/cancel/<task_id> (cancel)
+        - Backend must call the STAR inference script for processing.
+        - Provide complete, runnable code with no placeholders.
+
+    - description: "Python backend code style and quality"
+      apply_to: ["backend"]
+      instruction: |
+        - Use type hints and docstrings for all functions and classes.
+        - Enforce PEP8 (max line length 100).
+        - No print statements; use logging.
+        - All endpoints must have error handling and return JSON responses.
+        - Write tests for all critical backend logic.
+
+    - description: "React frontend code style"
+      apply_to: ["frontend"]
+      instruction: |
+        - Use functional components and hooks.
+        - Use TypeScript for all files.
+        - Use ESLint and Prettier for formatting.
+        - All user input must be validated.
+
+    - description: "Repository and collaboration"
+      apply_to: ["project"]
+      instruction: |
+        - Must include: README.md, .gitignore, .cursor.yaml, .cursor/settings.yaml, .cursor/rules.yaml.
+        - All dependencies must be listed in requirements.txt (backend) and package.json (frontend).
+        - Use feature branches and pull requests for all changes.
+        - All code must be reviewed before merging to main.
+
+    - description: "Testing and CI"
+      apply_to: ["project"]
+      instruction: |
+        - All backend code must be covered by pytest tests.
+        - Aim for at least 80% test coverage.
+        - Add CI configuration if possible (e.g., GitHub Actions).
