@@ -686,16 +686,17 @@ def load_model(model_path, device='cuda'):
         'attn_type': 'vanilla'
     }
     
-    # Initialize model
-    model = VideoToVideo_sr(
-        config,
-        embed_dim=4,
-        ckpt_path=model_path
-    )
-    
-    # Move model to device
-    model = model.to(device)
-    model.eval()
+    # Initialize model with suppressed output
+    with suppress_model_output():
+        model = VideoToVideo_sr(
+            config,
+            embed_dim=4,
+            ckpt_path=model_path
+        )
+        
+        # Move model to device
+        model = model.to(device)
+        model.eval()
     
     logger.info("Model loaded successfully")
     debug_cuda_memory()
