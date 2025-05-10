@@ -27,7 +27,7 @@ warnings.filterwarnings("ignore", category=UserWarning, module="torchvision.mode
 # Configure logging to prevent duplicate messages
 logging.getLogger().handlers = []  # Clear existing handlers
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.WARNING,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[logging.StreamHandler()]
 )
@@ -35,6 +35,9 @@ logging.basicConfig(
 # Suppress duplicate loggers
 logging.getLogger('star_diffusion.cuda').propagate = False
 logging.getLogger('video_to_video').propagate = False
+logging.getLogger('torch').setLevel(logging.WARNING)
+logging.getLogger('PIL').setLevel(logging.WARNING)
+logging.getLogger('tqdm').setLevel(logging.WARNING)
 
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 sys.path.append(base_path)

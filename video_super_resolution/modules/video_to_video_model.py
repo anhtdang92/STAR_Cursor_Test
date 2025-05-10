@@ -11,6 +11,20 @@ import io
 import builtins
 import sys
 
+# Configure logging to prevent duplicate messages
+logging.getLogger().handlers = []  # Clear existing handlers
+logging.basicConfig(
+    level=logging.WARNING,  # Changed from INFO to WARNING
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler()]
+)
+
+# Suppress duplicate loggers
+logging.getLogger('star_diffusion.cuda').propagate = False
+logging.getLogger('video_to_video').propagate = False
+logging.getLogger('torch').setLevel(logging.WARNING)  # Added to suppress PyTorch logs
+logging.getLogger('PIL').setLevel(logging.WARNING)  # Added to suppress PIL logs
+
 logger = logging.getLogger(__name__)
 
 # Suppress PyTorch's verbose output
