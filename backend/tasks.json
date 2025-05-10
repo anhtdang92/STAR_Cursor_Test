@@ -736,5 +736,65 @@
       "total_frames": 78
     },
     "total_frames": 78
+  },
+  "6f6f8554-3fb5-442e-a6ce-074e4f45558b": {
+    "status": "processing",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\6f6f8554-3fb5-442e-a6ce-074e4f45558b_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\6f6f8554-3fb5-442e-a6ce-074e4f45558b_upscaled_test.mp4",
+    "created_at": "2025-05-10T15:30:34.246428",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "denoiseLevel": 0,
+      "preserveDetails": true,
+      "quality": "balanced",
+      "guideScale": 7.5
+    },
+    "video_info": {
+      "fps": 15.0,
+      "total_frames": 78
+    },
+    "total_frames": 78
+  },
+  "668cfc2e-a82f-4061-b7fa-ddafa8793088": {
+    "status": "processing",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\668cfc2e-a82f-4061-b7fa-ddafa8793088_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\668cfc2e-a82f-4061-b7fa-ddafa8793088_upscaled_test.mp4",
+    "created_at": "2025-05-10T15:36:39.095462",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "denoiseLevel": 0,
+      "preserveDetails": true,
+      "quality": "balanced",
+      "guideScale": 7.5
+    },
+    "video_info": {
+      "fps": 15.0,
+      "total_frames": 78
+    },
+    "total_frames": 78
+  },
+  "2e435360-1325-4e79-9491-fa82e1b34173": {
+    "status": "processing",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\2e435360-1325-4e79-9491-fa82e1b34173_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\2e435360-1325-4e79-9491-fa82e1b34173_upscaled_test.mp4",
+    "created_at": "2025-05-10T15:45:35.403755",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "denoiseLevel": 0,
+      "preserveDetails": true,
+      "quality": "balanced",
+      "guideScale": 7.5
+    },
+    "video_info": {
+      "fps": 15.0,
+      "total_frames": 78
+    },
+    "total_frames": 78
   }
 }

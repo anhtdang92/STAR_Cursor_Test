@@ -229,6 +229,7 @@ class STAR():
         batch_size: int = 1
     ):
         logger.info("Initializing STAR model...")
+        print("Initializing STAR model...", flush=True)
         logger.info(f"Output path: {output_path}")
         logger.info(f"Model path: {model_path}")
         logger.info(f"Device: {device}")
@@ -237,6 +238,8 @@ class STAR():
             logger.info(f"CUDA device: {torch.cuda.get_device_name(0)}")
             logger.info(f"CUDA memory allocated: {torch.cuda.memory_allocated() / 1024**2:.2f} MB")
             logger.info(f"CUDA memory cached: {torch.cuda.memory_reserved() / 1024**2:.2f} MB")
+        print(f"Model path: {model_path}", flush=True)
+        print(f"Device: {device}", flush=True)
         
         self.output_path = output_path
         self.model_path = model_path
@@ -278,20 +281,27 @@ class STAR():
         # Load model
         try:
             logger.info(f"Loading VideoToVideo_sr model from path: {model_path}")
+            print(f"Loading VideoToVideo_sr model from path: {model_path}", flush=True)
             self.model = VideoToVideo_sr(EasyDict(model_path=model_path))
             logger.info("VideoToVideo_sr model loaded successfully.")
+            print("VideoToVideo_sr model loaded successfully.", flush=True)
             
             logger.info(f"Moving model to device: {self.device}")
+            print(f"Moving model to device: {self.device}", flush=True)
             self.model.to(self.device)
             logger.info(f"Model moved to device: {self.device}")
+            print(f"Model moved to device: {self.device}", flush=True)
             
             logger.info("Setting model to eval mode.")
             self.model.eval()
             logger.info("Model initialization complete.")
+            print("Model initialization complete.", flush=True)
             
         except Exception as e:
             logger.error(f"Error initializing model: {str(e)}")
             logger.error(f"Full traceback: {traceback.format_exc()}")
+            print(f"Error initializing model: {e}", flush=True)
+            print(traceback.format_exc(), flush=True)
             raise
 
     def enhance_a_video(self, input_path: str):
@@ -306,19 +316,22 @@ class STAR():
         logger.info(f"STAR.enhance_a_video finished for input: {input_path}")
 
     def create_dataloader(self, input_path: str):
-        """Create an optimized data loader for video processing."""
         logger.info(f"STAR.create_dataloader: Loading video: {input_path}")
+        print(f"STAR.create_dataloader: Loading video: {input_path}", flush=True)
         input_frames, input_fps = load_video(input_path)
         logger.info(f"STAR.create_dataloader: Input FPS: {input_fps}, Number of frames: {len(input_frames)}")
+        print(f"STAR.create_dataloader: Input FPS: {input_fps}, Number of frames: {len(input_frames)}", flush=True)
         
         # Preprocess frames
         video_data = preprocess(input_frames)
         _, _, h, w = video_data.shape
         logger.info(f"STAR.create_dataloader: Input resolution: {(h, w)}")
+        print(f"STAR.create_dataloader: Input resolution: {(h, w)}", flush=True)
         
         # Calculate target resolution
         target_h, target_w = h * self.upscale, w * self.upscale
         logger.info(f"STAR.create_dataloader: Target resolution: {(target_h, target_w)}")
+        print(f"STAR.create_dataloader: Target resolution: {(target_h, target_w)}", flush=True)
         
         # Create dataset
         dataset = VideoDataset(
@@ -330,6 +343,7 @@ class STAR():
         )
         
         logger.info(f"STAR.create_dataloader: Dataset created. Max_chunk_len={self.max_chunk_len}, frame_stride={self.frame_stride}, resize_short_edge={self.resize_short_edge}")
+        print(f"STAR.create_dataloader: Dataset created. Max_chunk_len={self.max_chunk_len}, frame_stride={self.frame_stride}, resize_short_edge={self.resize_short_edge}", flush=True)
         # Create data loader with optimized settings
         dataloader = torch.utils.data.DataLoader(
             dataset,
@@ -340,86 +354,87 @@ class STAR():
         )
         
         logger.info(f"STAR.create_dataloader: DataLoader created with batch_size={self.batch_size}, num_workers={self.num_workers}, pin_memory={self.pin_memory}")
+        print(f"STAR.create_dataloader: DataLoader created with batch_size={self.batch_size}, num_workers={self.num_workers}, pin_memory={self.pin_memory}", flush=True)
         return dataloader, input_fps, video_data
 
     def process_video(self, dataloader, input_fps, video_data):
-        """Process video with GPU optimizations."""
         logger.info(f"STAR.process_video: Starting video processing. Input FPS: {input_fps}, Batches in dataloader: {len(dataloader)}")
-        
+        print(f"STAR.process_video: Starting video processing. Input FPS: {input_fps}, Batches in dataloader: {len(dataloader)}", flush=True)
         all_output_frames = []
         original_frames_for_color_fix = []
         logger.info("Preparing for frame processing loop.")
+        print("Preparing for frame processing loop.", flush=True)
         pbar = tqdm(dataloader, desc="Processing video chunks")
-        
-        # Calculate total frames and log initial state
         total_frames = video_data.shape[0]
         logger.info(f"Total frames to process: {total_frames}")
+        print(f"Total frames to process: {total_frames}", flush=True)
         logger.info(f"Batch size: {self.batch_size}, Max chunk length: {self.max_chunk_len}, Frame stride: {self.frame_stride}")
+        print(f"Batch size: {self.batch_size}, Max chunk length: {self.max_chunk_len}, Frame stride: {self.frame_stride}", flush=True)
         logger.info(f"Expected number of batches: {len(dataloader)}")
-        
+        print(f"Expected number of batches: {len(dataloader)}", flush=True)
         try:
             for i, batch in enumerate(pbar):
                 logger.info(f"Processing batch {i+1}/{len(dataloader)}")
+                print(f"Processing batch {i+1}/{len(dataloader)}", flush=True)
                 try:
                     original_chunk = batch['original_video'].to(self.device)
                     video_chunk = batch['video_data'].to(self.device)
                     target_res_chunk = batch['target_res'] 
-                    
                     logger.info(f"  Original chunk shape: {original_chunk.shape}, Video chunk shape: {video_chunk.shape}")
+                    print(f"  Original chunk shape: {original_chunk.shape}, Video chunk shape: {video_chunk.shape}", flush=True)
                     logger.info(f"  Target resolution: {target_res_chunk}")
-
+                    print(f"  Target resolution: {target_res_chunk}", flush=True)
                     with torch.no_grad():
                         logger.info(f"  Calling model.test for batch {i+1}")
+                        print(f"  Calling model.test for batch {i+1}", flush=True)
                         output_chunk = self.model.test({
                             'video_data': video_chunk,
                             'y': ['' for _ in range(video_chunk.shape[0])],  # Assuming empty prompts for now
                             'target_res': (target_res_chunk[0][0].item(), target_res_chunk[1][0].item())
                         }, steps=self.steps, guide_scale=self.guide_scale, max_chunk_len=self.max_chunk_len)
                         logger.info(f"  Model.test completed for batch {i+1}. Output chunk shape: {output_chunk.shape}")
-
-                    # Color fix
+                        print(f"  Model.test completed for batch {i+1}. Output chunk shape: {output_chunk.shape}", flush=True)
                     if self.preserve_details:
                         logger.info(f"  Applying Adain color fix for batch {i+1}")
+                        print(f"  Applying Adain color fix for batch {i+1}", flush=True)
                         output_chunk = adain_color_fix(output_chunk, original_chunk)
                         logger.info(f"  Adain color fix applied for batch {i+1}")
-                    
+                        print(f"  Adain color fix applied for batch {i+1}", flush=True)
                     output_chunk = output_chunk.squeeze(0).permute(1, 2, 3, 0).cpu().numpy() # B C F H W -> F H W C
                     output_chunk = (output_chunk * 255).astype(np.uint8)
                     all_output_frames.extend([frame for frame in output_chunk])
-                    
-                    # For color fix of the whole video
                     original_frames_for_color_fix.extend([frame for frame in original_chunk.squeeze(0).permute(1, 2, 3, 0).cpu().numpy()])
-
-                    # Calculate current frame progress
                     current_frame = min((i + 1) * self.batch_size * self.max_chunk_len, total_frames)
                     progress_msg = f"Processing frame {current_frame}/{total_frames}"
-                    print(progress_msg, flush=True)  # Print directly to stdout for immediate feedback
+                    print(progress_msg, flush=True)
                     logger.info(progress_msg)
                     pbar.set_postfix_str(progress_msg)
-
                     if hasattr(self, 'output_path'):
                         task_id = extract_task_id(self.output_path)
                         logger.info(f"Updating backend progress for task {task_id}: {progress_msg}")
                         update_backend_progress(task_id, current_frame, total_frames, progress_msg)
-                        
                 except Exception as e:
                     logger.error(f"Error processing batch {i+1}: {str(e)}")
                     logger.error(f"Full traceback: {traceback.format_exc()}")
+                    print(f"Error processing batch {i+1}: {e}", flush=True)
+                    print(traceback.format_exc(), flush=True)
                     raise
-
             logger.info(f"All batches processed. Total output frames collected: {len(all_output_frames)}")
-            
-            # Save the processed video
+            print(f"All batches processed. Total output frames collected: {len(all_output_frames)}", flush=True)
             if all_output_frames:
                 logger.info(f"Saving processed video to {self.output_path} with FPS: {input_fps}")
+                print(f"Saving processed video to {self.output_path} with FPS: {input_fps}", flush=True)
                 save_video_frames(self.output_path, all_output_frames, input_fps)
                 logger.info(f"Processed video saved successfully to {self.output_path}")
+                print(f"Processed video saved successfully to {self.output_path}", flush=True)
             else:
                 logger.warning("No output frames were generated to save.")
-                
+                print("No output frames were generated to save.", flush=True)
         except Exception as e:
             logger.error(f"Error in process_video: {str(e)}")
             logger.error(f"Full traceback: {traceback.format_exc()}")
+            print(f"Error in process_video: {e}", flush=True)
+            print(traceback.format_exc(), flush=True)
             raise
 
 class VideoDataset(torch.utils.data.Dataset):
@@ -545,7 +560,9 @@ def main():
     except Exception as e:
         logger.error(f"Error in main(): {str(e)}")
         logger.error(f"Full traceback: {traceback.format_exc()}")
-        raise
+        print(f"Fatal error: {e}", flush=True)
+        print(traceback.format_exc(), flush=True)
+        sys.exit(1)
 
 if __name__ == "__main__":
     try:
@@ -553,6 +570,8 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"Fatal error: {str(e)}")
         logger.error(f"Full traceback: {traceback.format_exc()}")
+        print(f"Fatal error: {e}", flush=True)
+        print(traceback.format_exc(), flush=True)
         sys.exit(1)
 
 def load_model(model_path: str, device: str = 'cuda') -> VideoToVideo_sr:

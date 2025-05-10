@@ -9,7 +9,7 @@ class Config:
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
     PROCESSED_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'processed')
     MODEL_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
-                             'video_super_resolution', 'models', 'star.safetensors')
+                             'video_super_resolution', 'models', 'light_deg.pt')
     
     @staticmethod
     def init_app(app):

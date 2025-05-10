@@ -1,7 +1,7 @@
 import requests
 import time
 
-task_id = '6d87bdcd-fe5f-4ffc-a2b7-8f897eab3283'
+task_id = '52cacce1-36e6-49e2-a18c-40f5629aebc9'
 url = f'http://localhost:5000/api/status/{task_id}'
 
 while True:

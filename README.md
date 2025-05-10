@@ -96,6 +96,23 @@ cd backend
 python -m pytest
 ```
 
+### PowerShell Command Syntax
+When running commands in PowerShell, use semicolons (;) instead of && for command chaining:
+```powershell
+# Correct PowerShell syntax
+cd backend; python app.py
+
+# Incorrect syntax (will cause error)
+cd backend && python app.py
+```
+
+### Activating the Virtual Environment
+Before running any commands, ensure that the virtual environment is activated:
+```powershell
+# Activate the virtual environment
+.venv\\Scripts\\activate
+```
+
 ### Building for Production
 ```bash
 cd frontend
@@ -239,7 +256,7 @@ If this project helps your research or work, please consider citing our paper:
 ## ⚙️ Dependencies and Installation
 **VRAM requirement**: Upscaling the provided toy example by 4x, with 72 frames, a width of 426, and a height of 240, requires around 39GB of VRAM using the default settings. If you encounter an OOM problem, you can set a smaller frame_length in inference_sr.sh. We recommend using a GPU with at least 24GB of VRAM to run this project. 
 
-```
+```README.md
 .
 ├── frontend/
 │   ├── src/

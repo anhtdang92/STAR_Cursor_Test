@@ -256,16 +256,12 @@ class CrossAttention(nn.Module):
 
 
 class MemoryEfficientCrossAttention(nn.Module):
-    # https://github.com/MatthieuTPHR/diffusers/blob/d80b531ff8060ec1ea982b65a1b8df70f73aa67c/src/diffusers/models/attention.py#L223
     def __init__(self, query_dim, context_dim=None, heads=8, dim_head=64, dropout=0.0, **kwargs):
         super().__init__()
-        print(
-            f"Setting up {self.__class__.__name__}. Query dim is {query_dim}, context_dim is {context_dim} and using "
-            f"{heads} heads with a dimension of {dim_head}."
-        )
         inner_dim = dim_head * heads
         context_dim = default(context_dim, query_dim)
 
+        self.scale = dim_head**-0.5
         self.heads = heads
         self.dim_head = dim_head
 
@@ -274,16 +270,8 @@ class MemoryEfficientCrossAttention(nn.Module):
         self.to_v = nn.Linear(context_dim, inner_dim, bias=False)
 
         self.to_out = nn.Sequential(nn.Linear(inner_dim, query_dim), nn.Dropout(dropout))
-        self.attention_op: Optional[Any] = None
 
-    def forward(
-        self,
-        x,
-        context=None,
-        mask=None,
-        additional_tokens=None,
-        n_times_crossframe_attn_in_self=0,
-    ):
+    def forward(self, x, context=None, mask=None, additional_tokens=None, n_times_crossframe_attn_in_self=0):
         if additional_tokens is not None:
             # get the number of masked tokens at the beginning of the output sequence
             n_tokens_to_mask = additional_tokens.shape[1]
@@ -297,7 +285,6 @@ class MemoryEfficientCrossAttention(nn.Module):
         if n_times_crossframe_attn_in_self:
             # reprogramming cross-frame attention as in https://arxiv.org/abs/2303.13439
             assert x.shape[0] % n_times_crossframe_attn_in_self == 0
-            # n_cp = x.shape[0]//n_times_crossframe_attn_in_self
             k = repeat(
                 k[::n_times_crossframe_attn_in_self],
                 "b ... -> (b n) ...",
@@ -309,38 +296,23 @@ class MemoryEfficientCrossAttention(nn.Module):
                 n=n_times_crossframe_attn_in_self,
             )
 
+        # Reshape for attention
         b, _, _ = q.shape
-        q, k, v = map(
-            lambda t: t.unsqueeze(3)
-            .reshape(b, t.shape[1], self.heads, self.dim_head)
-            .permute(0, 2, 1, 3)
-            .reshape(b * self.heads, t.shape[1], self.dim_head)
-            .contiguous(),
-            (q, k, v),
-        )
+        q = q.view(b, -1, self.heads, self.dim_head).transpose(1, 2)
+        k = k.view(b, -1, self.heads, self.dim_head).transpose(1, 2)
+        v = v.view(b, -1, self.heads, self.dim_head).transpose(1, 2)
 
-        # actually compute the attention, what we cannot get enough of
-        out = xformers.ops.memory_efficient_attention(q, k, v, attn_bias=None, op=self.attention_op)
+        # Use PyTorch's scaled_dot_product_attention
+        out = F.scaled_dot_product_attention(q, k, v, attn_mask=mask, dropout_p=0.0)
 
-        # TODO: Use this directly in the attention operation, as a bias
-        if exists(mask):
-            raise NotImplementedError
-        out = (
-            out.unsqueeze(0)
-            .reshape(b, self.heads, out.shape[1], self.dim_head)
-            .permute(0, 2, 1, 3)
-            .reshape(b, out.shape[1], self.heads * self.dim_head)
-        )
-        if additional_tokens is not None:
-            # remove additional token
-            out = out[:, n_tokens_to_mask:]
+        # Reshape and project to output
+        out = out.transpose(1, 2).reshape(b, -1, self.heads * self.dim_head)
         return self.to_out(out)
 
 
 class BasicTransformerBlock(nn.Module):
     ATTENTION_MODES = {
         "softmax": CrossAttention,  # vanilla attention
-        "softmax-xformers": MemoryEfficientCrossAttention,  # ampere
     }
 
     def __init__(
@@ -358,26 +330,12 @@ class BasicTransformerBlock(nn.Module):
     ):
         super().__init__()
         assert attn_mode in self.ATTENTION_MODES
-        if attn_mode != "softmax" and not XFORMERS_IS_AVAILABLE:
-            print(
-                f"Attention mode '{attn_mode}' is not available. Falling back to native attention. "
-                f"This is not a problem in Pytorch >= 2.0. FYI, you are running with PyTorch version {torch.__version__}"
-            )
-            attn_mode = "softmax"
-        elif attn_mode == "softmax" and not SDP_IS_AVAILABLE:
-            print("We do not support vanilla attention anymore, as it is too expensive. Sorry.")
-            if not XFORMERS_IS_AVAILABLE:
-                assert False, "Please install xformers via e.g. 'pip install xformers==0.0.16'"
-            else:
-                print("Falling back to xformers efficient attention.")
-                attn_mode = "softmax-xformers"
-        attn_cls = self.ATTENTION_MODES[attn_mode]
         if version.parse(torch.__version__) >= version.parse("2.0.0"):
             assert sdp_backend is None or isinstance(sdp_backend, SDPBackend)
         else:
             assert sdp_backend is None
         self.disable_self_attn = disable_self_attn
-        self.attn1 = attn_cls(
+        self.attn1 = self.ATTENTION_MODES[attn_mode](
             query_dim=dim,
             heads=n_heads,
             dim_head=d_head,
@@ -386,48 +344,16 @@ class BasicTransformerBlock(nn.Module):
             backend=sdp_backend,
         )  # is a self-attention if not self.disable_self_attn
         self.ff = FeedForward(dim, dropout=dropout, glu=gated_ff)
-        self.attn2 = attn_cls(
-            query_dim=dim,
-            context_dim=context_dim,
-            heads=n_heads,
-            dim_head=d_head,
-            dropout=dropout,
-            backend=sdp_backend,
-        )  # is self-attn if context is none
         self.norm1 = nn.LayerNorm(dim)
         self.norm2 = nn.LayerNorm(dim)
-        self.norm3 = nn.LayerNorm(dim)
         self.checkpoint = checkpoint
-        if self.checkpoint:
-            print(f"{self.__class__.__name__} is using checkpointing")
 
-    def forward(self, x, context=None, additional_tokens=None, n_times_crossframe_attn_in_self=0):
-        kwargs = {"x": x}
-
-        if context is not None:
-            kwargs.update({"context": context})
-
-        if additional_tokens is not None:
-            kwargs.update({"additional_tokens": additional_tokens})
-
-        if n_times_crossframe_attn_in_self:
-            kwargs.update({"n_times_crossframe_attn_in_self": n_times_crossframe_attn_in_self})
-
-        # return mixed_checkpoint(self._forward, kwargs, self.parameters(), self.checkpoint)
+    def forward(self, x, context=None):
         return checkpoint(self._forward, (x, context), self.parameters(), self.checkpoint)
 
-    def _forward(self, x, context=None, additional_tokens=None, n_times_crossframe_attn_in_self=0):
-        x = (
-            self.attn1(
-                self.norm1(x),
-                context=context if self.disable_self_attn else None,
-                additional_tokens=additional_tokens,
-                n_times_crossframe_attn_in_self=n_times_crossframe_attn_in_self if not self.disable_self_attn else 0,
-            )
-            + x
-        )
-        x = self.attn2(self.norm2(x), context=context, additional_tokens=additional_tokens) + x
-        x = self.ff(self.norm3(x)) + x
+    def _forward(self, x, context=None):
+        x = self.attn1(self.norm1(x), context=context if self.disable_self_attn else None) + x
+        x = self.ff(self.norm2(x)) + x
         return x
 
 

@@ -45,13 +45,6 @@ def setup_environment():
         run_command(f"{activate_script} && pip install -r requirements.txt")
     else:
         run_command(f"{activate_script} && pip install -r requirements.txt")
-    
-    # Install xformers
-    print("Installing xformers...")
-    if platform.system() == "Windows":
-        run_command(f"{activate_script} && pip install xformers==0.0.23.post1")
-    else:
-        run_command(f"{activate_script} && pip install xformers==0.0.23.post1")
 
 def download_models():
     """Download required model files."""
