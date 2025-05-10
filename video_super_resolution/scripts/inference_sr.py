@@ -25,7 +25,7 @@ from video_super_resolution.color_fix import adain_color_fix
 
 from inference_utils import *
 
-def setup_logging(log_level='DEBUG'):
+def setup_logging(log_level='WARNING'):
     """Set up logging configuration for testing inference SR script."""
     # Create logs directory if it doesn't exist
     log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'logs')
@@ -38,7 +38,7 @@ def setup_logging(log_level='DEBUG'):
     # Configure root logger
     logging.basicConfig(
         level=getattr(logging, log_level.upper()),
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        format='%(asctime)s - %(levelname)s - %(message)s',
         handlers=[
             # File handler for all logs
             logging.FileHandler(log_file),
@@ -70,7 +70,7 @@ def parse_args():
     parser = ArgumentParser()
     parser.add_argument("--input_path", type=str, required=True, help="Path to the input video file.")
     parser.add_argument("--output_path", type=str, required=True, help="Path to save the upscaled video.")
-    parser.add_argument("--model_path", type=str, required=True, help="model path")
+    parser.add_argument("--model_path", type=str, default="models/light_deg.pt", help="model path")
     parser.add_argument("--upscale", type=int, default=4, help='up-scale factor (2, 4, or 8)')
     parser.add_argument("--max_chunk_len", type=int, default=32, help='max chunk length for processing')
     parser.add_argument("--solver_mode", type=str, default='fast', help='fast | balanced | quality')
@@ -85,7 +85,7 @@ def parse_args():
     parser.add_argument("--num_workers", type=int, default=8, help='number of workers for data loading')
     parser.add_argument("--pin_memory", action='store_true', help='pin memory for data loading')
     parser.add_argument("--batch_size", type=int, default=1, help='batch size for processing')
-    parser.add_argument('--log-level', type=str, default='DEBUG', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], help='Set logging level')
+    parser.add_argument('--log-level', type=str, default='WARNING', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], help='Set logging level')
     return parser.parse_args()
 
 args = parse_args()
@@ -457,83 +457,50 @@ class STAR():
         return dataloader, input_fps, video_data
 
     def process_video(self, dataloader, input_fps, video_data):
-        logger.info(f"STAR.process_video: Starting video processing. Input FPS: {input_fps}, Batches in dataloader: {len(dataloader)}")
-        print(f"STAR.process_video: Starting video processing. Input FPS: {input_fps}, Batches in dataloader: {len(dataloader)}", flush=True)
+        logger.info(f"Starting video processing. Input FPS: {input_fps}, Total frames: {video_data.shape[0]}")
         all_output_frames = []
         original_frames_for_color_fix = []
-        logger.info("Preparing for frame processing loop.")
-        print("Preparing for frame processing loop.", flush=True)
         pbar = tqdm(dataloader, desc="Processing video chunks")
         total_frames = video_data.shape[0]
-        logger.info(f"Total frames to process: {total_frames}")
-        print(f"Total frames to process: {total_frames}", flush=True)
-        logger.info(f"Batch size: {self.batch_size}, Max chunk length: {self.max_chunk_len}, Frame stride: {self.frame_stride}")
-        print(f"Batch size: {self.batch_size}, Max chunk length: {self.max_chunk_len}, Frame stride: {self.frame_stride}", flush=True)
-        logger.info(f"Expected number of batches: {len(dataloader)}")
-        print(f"Expected number of batches: {len(dataloader)}", flush=True)
+        
         try:
             for i, batch in enumerate(pbar):
-                logger.info(f"Processing batch {i+1}/{len(dataloader)}")
-                print(f"Processing batch {i+1}/{len(dataloader)}", flush=True)
                 try:
                     original_chunk = batch['original_video'].to(self.device)
                     video_chunk = batch['video_data'].to(self.device)
                     target_res_chunk = batch['target_res'] 
-                    logger.info(f"  Original chunk shape: {original_chunk.shape}, Video chunk shape: {video_chunk.shape}")
-                    print(f"  Original chunk shape: {original_chunk.shape}, Video chunk shape: {video_chunk.shape}", flush=True)
-                    logger.info(f"  Target resolution: {target_res_chunk}")
-                    print(f"  Target resolution: {target_res_chunk}", flush=True)
+                    
                     with torch.no_grad():
-                        logger.info(f"  Calling model.test for batch {i+1}")
-                        print(f"  Calling model.test for batch {i+1}", flush=True)
                         output_chunk = self.model.test({
                             'video_data': video_chunk,
-                            'y': ['' for _ in range(video_chunk.shape[0])],  # Assuming empty prompts for now
+                            'y': ['' for _ in range(video_chunk.shape[0])],
                             'target_res': (target_res_chunk[0][0].item(), target_res_chunk[1][0].item())
                         }, steps=self.steps, guide_scale=self.guide_scale, max_chunk_len=self.max_chunk_len)
-                        logger.info(f"  Model.test completed for batch {i+1}. Output chunk shape: {output_chunk.shape}")
-                        print(f"  Model.test completed for batch {i+1}. Output chunk shape: {output_chunk.shape}", flush=True)
+                    
                     if self.preserve_details:
-                        logger.info(f"  Applying Adain color fix for batch {i+1}")
-                        print(f"  Applying Adain color fix for batch {i+1}", flush=True)
                         output_chunk = adain_color_fix(output_chunk, original_chunk)
-                        logger.info(f"  Adain color fix applied for batch {i+1}")
-                        print(f"  Adain color fix applied for batch {i+1}", flush=True)
-                    output_chunk = output_chunk.squeeze(0).permute(1, 2, 3, 0).cpu().numpy() # B C F H W -> F H W C
+                    
+                    output_chunk = output_chunk.squeeze(0).permute(1, 2, 3, 0).cpu().numpy()
                     output_chunk = (output_chunk * 255).astype(np.uint8)
                     all_output_frames.extend([frame for frame in output_chunk])
                     original_frames_for_color_fix.extend([frame for frame in original_chunk.squeeze(0).permute(1, 2, 3, 0).cpu().numpy()])
+                    
                     current_frame = min((i + 1) * self.batch_size * self.max_chunk_len, total_frames)
-                    progress_msg = f"Processing frame {current_frame}/{total_frames}"
-                    print(progress_msg, flush=True)
-                    logger.info(progress_msg)
-                    pbar.set_postfix_str(progress_msg)
-                    if hasattr(self, 'output_path'):
-                        task_id = extract_task_id(self.output_path)
-                        logger.info(f"Updating backend progress for task {task_id}: {progress_msg}")
-                        update_backend_progress(task_id, current_frame, total_frames, progress_msg)
+                    pbar.set_postfix_str(f"Frame {current_frame}/{total_frames}")
+                    
                 except Exception as e:
                     logger.error(f"Error processing batch {i+1}: {str(e)}")
-                    logger.error(f"Full traceback: {traceback.format_exc()}")
-                    print(f"Error processing batch {i+1}: {e}", flush=True)
-                    print(traceback.format_exc(), flush=True)
                     raise
-            logger.info(f"All batches processed. Total output frames collected: {len(all_output_frames)}")
-            print(f"All batches processed. Total output frames collected: {len(all_output_frames)}", flush=True)
+                
             if all_output_frames:
-                logger.info(f"Saving processed video to {self.output_path} with FPS: {input_fps}")
-                print(f"Saving processed video to {self.output_path} with FPS: {input_fps}", flush=True)
+                logger.info(f"Saving processed video to {self.output_path}")
                 save_video_frames(self.output_path, all_output_frames, input_fps)
-                logger.info(f"Processed video saved successfully to {self.output_path}")
-                print(f"Processed video saved successfully to {self.output_path}", flush=True)
+                logger.info("Video processing completed successfully")
             else:
                 logger.warning("No output frames were generated to save.")
-                print("No output frames were generated to save.", flush=True)
+                
         except Exception as e:
             logger.error(f"Error in process_video: {str(e)}")
-            logger.error(f"Full traceback: {traceback.format_exc()}")
-            print(f"Error in process_video: {e}", flush=True)
-            print(traceback.format_exc(), flush=True)
             raise
 
 class VideoDataset(torch.utils.data.Dataset):
@@ -599,8 +566,13 @@ def main():
     logger.info("inference_sr.py main() function started.")
     logger.info(f"sys.argv: {sys.argv}")  # Debug: print command line arguments
     args = parse_args()
-    logger.info(f"Parsed arguments: {args}")  # Debug: print parsed arguments
-
+    
+    # Update model path to be relative to the script location
+    if not os.path.isabs(args.model_path):
+        args.model_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), args.model_path)
+    
+    logger.info(f"Using model path: {args.model_path}")
+    
     setup_seed(42)
     logger.info("Seed set to 42.")
 
