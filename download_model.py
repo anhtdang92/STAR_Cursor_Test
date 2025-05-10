@@ -19,10 +19,12 @@ def download_file(url, filename):
     print("\nDownload complete!")
 
 if __name__ == "__main__":
-    # Create models directory if it doesn't exist
-    os.makedirs("video_super_resolution/models", exist_ok=True)
+    # Create pretrained_weight directory if it doesn't exist
+    os.makedirs("pretrained_weight", exist_ok=True)
     
-    # Download the model
+    # Download the light degradation model
     url = "https://huggingface.co/SherryX/STAR/resolve/main/I2VGen-XL-based/light_deg.pt"
-    filename = "video_super_resolution/models/star.pth"
-    download_file(url, filename) 
+    filename = "pretrained_weight/light_deg.pt"
+    download_file(url, filename)
+    
+    print("Model downloaded successfully!") 

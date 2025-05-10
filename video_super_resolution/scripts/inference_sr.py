@@ -25,6 +25,46 @@ from video_super_resolution.color_fix import adain_color_fix
 
 from inference_utils import *
 
+def setup_logging(log_level='DEBUG'):
+    """Set up logging configuration for testing inference SR script."""
+    # Create logs directory if it doesn't exist
+    log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'logs')
+    os.makedirs(log_dir, exist_ok=True)
+    
+    # Create a timestamp for the log file
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_file = os.path.join(log_dir, f'star_test_{timestamp}.log')
+    
+    # Configure root logger
+    logging.basicConfig(
+        level=getattr(logging, log_level.upper()),
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            # File handler for all logs
+            logging.FileHandler(log_file),
+            # Console handler for immediate feedback
+            logging.StreamHandler()
+        ]
+    )
+    
+    # Create logger for this module
+    logger = logging.getLogger(__name__)
+    logger.setLevel(getattr(logging, log_level.upper()))
+    
+    # Log system information
+    logger.info("=== STAR Inference SR Test Logging Started ===")
+    logger.info(f"Log file: {log_file}")
+    logger.info(f"Python version: {sys.version}")
+    logger.info(f"PyTorch version: {torch.__version__}")
+    logger.info(f"CUDA available: {torch.cuda.is_available()}")
+    if torch.cuda.is_available():
+        logger.info(f"CUDA device: {torch.cuda.get_device_name(0)}")
+        logger.info(f"CUDA memory allocated: {torch.cuda.memory_allocated() / 1024**2:.2f} MB")
+        logger.info(f"CUDA memory cached: {torch.cuda.memory_reserved() / 1024**2:.2f} MB")
+    logger.info(f"Current working directory: {os.getcwd()}")
+    
+    return logger
+
 # Add log level argument to parser
 def parse_args():
     parser = ArgumentParser()
@@ -45,10 +85,11 @@ def parse_args():
     parser.add_argument("--num_workers", type=int, default=8, help='number of workers for data loading')
     parser.add_argument("--pin_memory", action='store_true', help='pin memory for data loading')
     parser.add_argument("--batch_size", type=int, default=1, help='batch size for processing')
-    parser.add_argument('--log-level', type=str, default='INFO', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], help='Set logging level')
+    parser.add_argument('--log-level', type=str, default='DEBUG', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], help='Set logging level')
     return parser.parse_args()
 
 args = parse_args()
+logger = setup_logging(args.log_level)
 
 # Configure logging
 log_level = getattr(logging, args.log_level.upper(), logging.INFO)
@@ -127,6 +168,8 @@ class VideoProcessor:
         self.total_frames = 0
         self.fps = 0
         logger.info("VideoProcessor initialized.")
+        logger.debug(f"Model type: {type(model)}")
+        logger.debug(f"Model device: {next(model.parameters()).device}")
 
     def process_video(self, input_path, output_path, chunk_size=16):
         """Process video with progress tracking and partial saving support."""
@@ -136,7 +179,9 @@ class VideoProcessor:
             cap = cv2.VideoCapture(input_path)
             self.total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             self.fps = cap.get(cv2.CAP_PROP_FPS)
-            logger.info(f"Video info: Total frames = {self.total_frames}, FPS = {self.fps}")
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            logger.info(f"Video info: Total frames = {self.total_frames}, FPS = {self.fps}, Resolution = {width}x{height}")
             
             # Progress bar setup
             pbar = tqdm(total=self.total_frames, desc="Processing frames")
@@ -157,12 +202,20 @@ class VideoProcessor:
                     break
                 
                 logger.debug(f"Processing chunk: current_frame = {self.current_frame}, frames in chunk = {len(frames_chunk)}")
+                logger.debug(f"Chunk frame shape: {frames_chunk[0].shape}")
+                
                 # Process chunk
                 try:
                     processed_chunk = self.process_chunk(frames_chunk)
                     self.processed_frames.extend(processed_chunk)
                     pbar.update(len(frames_chunk))
                     logger.debug(f"Chunk processed. Total processed_frames = {len(self.processed_frames)}")
+                    logger.debug(f"Processed frame shape: {processed_chunk[0].shape}")
+                    
+                    # Log memory usage periodically
+                    if torch.cuda.is_available():
+                        logger.debug(f"CUDA memory allocated: {torch.cuda.memory_allocated() / 1024**2:.2f} MB")
+                        logger.debug(f"CUDA memory cached: {torch.cuda.memory_reserved() / 1024**2:.2f} MB")
                     
                     # Save progress periodically (every 100 frames)
                     if len(self.processed_frames) % milestone == 0:
@@ -176,6 +229,7 @@ class VideoProcessor:
                         
                 except Exception as e:
                     logger.error(f"Error processing chunk: {str(e)}")
+                    logger.error(f"Traceback: {traceback.format_exc()}")
                     if self.processed_frames:
                         self.save_progress(output_path)
                     raise
@@ -199,6 +253,7 @@ class VideoProcessor:
                 
         except Exception as e:
             logger.error(f"Error processing video: {str(e)}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             if self.processed_frames:
                 self.save_progress(output_path)
             raise
@@ -210,10 +265,19 @@ class VideoProcessor:
             # Convert frames to tensor and process
             frames_tensor = self.prepare_frames(frames)
             logger.debug(f"Frames tensor prepared, shape: {frames_tensor.shape}, type: {frames_tensor.dtype}, device: {frames_tensor.device}")
+            
+            # Log memory before inference
+            if torch.cuda.is_available():
+                logger.debug(f"Pre-inference CUDA memory: {torch.cuda.memory_allocated() / 1024**2:.2f} MB")
+            
             with torch.no_grad():
                 logger.debug("Calling model for inference on chunk...")
                 processed_tensor = self.model(frames_tensor)
                 logger.debug(f"Model inference complete. Processed tensor shape: {processed_tensor.shape}, type: {processed_tensor.dtype}, device: {processed_tensor.device}")
+            
+            # Log memory after inference
+            if torch.cuda.is_available():
+                logger.debug(f"Post-inference CUDA memory: {torch.cuda.memory_allocated() / 1024**2:.2f} MB")
             
             # Convert back to numpy arrays
             processed_frames = self.tensor_to_frames(processed_tensor)
@@ -222,6 +286,7 @@ class VideoProcessor:
             
         except Exception as e:
             logger.error(f"Error in process_chunk: {str(e)}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             raise
             
     def save_progress(self, output_path):
