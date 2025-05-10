@@ -18,6 +18,7 @@ import sys
 import traceback
 import torch
 from pathlib import Path
+from contextlib import contextmanager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -59,16 +60,30 @@ CORS(app, resources={
 # Task status tracking with more detailed information
 TASKS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tasks.json')
 
+# Thread-safe task management
+tasks_lock = threading.Lock()
+tasks = {}
+
+@contextmanager
+def task_lock():
+    """Context manager for thread-safe task operations"""
+    try:
+        tasks_lock.acquire()
+        yield
+    finally:
+        tasks_lock.release()
+
 def load_tasks():
-    """Load tasks from JSON file"""
+    """Load tasks from JSON file with thread safety"""
     try:
         if os.path.exists(TASKS_FILE):
             with open(TASKS_FILE, 'r') as f:
                 tasks_data = json.load(f)
-                # Convert string timestamps back to datetime objects
-                for task_id, task in tasks_data.items():
-                    if 'created_at' in task:
-                        task['created_at'] = datetime.fromisoformat(task['created_at'])
+                with task_lock():
+                    for task_id, task in tasks_data.items():
+                        if 'created_at' in task:
+                            task['created_at'] = datetime.fromisoformat(task['created_at'])
+                    tasks.update(tasks_data)
                 logger.info(f"Loaded {len(tasks_data)} tasks from {TASKS_FILE}")
                 return tasks_data
     except Exception as e:
@@ -77,18 +92,19 @@ def load_tasks():
     return {}
 
 def save_tasks():
-    """Save tasks to JSON file"""
+    """Save tasks to JSON file with thread safety"""
     try:
-        tasks_data = {}
-        for task_id, task in tasks.items():
-            task_copy = task.copy()
-            if 'created_at' in task_copy:
-                task_copy['created_at'] = task_copy['created_at'].isoformat()
-            tasks_data[task_id] = task_copy
-        
-        with open(TASKS_FILE, 'w') as f:
-            json.dump(tasks_data, f, indent=2)
-        logger.info(f"Saved {len(tasks_data)} tasks to {TASKS_FILE}")
+        with task_lock():
+            tasks_data = {}
+            for task_id, task in tasks.items():
+                task_copy = task.copy()
+                if 'created_at' in task_copy:
+                    task_copy['created_at'] = task_copy['created_at'].isoformat()
+                tasks_data[task_id] = task_copy
+            
+            with open(TASKS_FILE, 'w') as f:
+                json.dump(tasks_data, f, indent=2)
+            logger.info(f"Saved {len(tasks_data)} tasks to {TASKS_FILE}")
     except Exception as e:
         logger.error(f"Error saving tasks: {str(e)}")
         logger.error(f"Full traceback: {traceback.format_exc()}")
@@ -205,24 +221,40 @@ if not check_ffmpeg():
         """)
 
 def cleanup_old_tasks():
-    """Clean up tasks older than 24 hours"""
+    """Clean up tasks older than 24 hours with proper error handling"""
     current_time = datetime.now()
-    for task_id in list(tasks.keys()):
-        task = tasks[task_id]
-        if current_time - task['created_at'] > timedelta(hours=24):
-            try:
-                if os.path.exists(task['input_path']):
-                    os.remove(task['input_path'])
-                if os.path.exists(task['output_path']):
-                    os.remove(task['output_path'])
-                del tasks[task_id]
-            except Exception as e:
-                logger.error(f"Error cleaning up task {task_id}: {str(e)}")
-    save_tasks()  # Save after cleanup
+    tasks_to_remove = []
+    
+    with task_lock():
+        for task_id, task in tasks.items():
+            if current_time - task['created_at'] > timedelta(hours=24):
+                tasks_to_remove.append((task_id, task))
+    
+    for task_id, task in tasks_to_remove:
+        try:
+            # Clean up files
+            for path_key in ['input_path', 'output_path']:
+                if path_key in task and os.path.exists(task[path_key]):
+                    try:
+                        os.remove(task[path_key])
+                    except OSError as e:
+                        logger.error(f"Error removing {path_key} for task {task_id}: {str(e)}")
+            
+            # Remove task from dictionary
+            with task_lock():
+                if task_id in tasks:
+                    del tasks[task_id]
+        except Exception as e:
+            logger.error(f"Error cleaning up task {task_id}: {str(e)}")
+    
+    save_tasks()
 
 def allowed_file(filename):
-    """Check if the file is allowed"""
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'mp4'}
+    """Check if the file is allowed with proper security checks"""
+    if not filename or '.' not in filename:
+        return False
+    filename = secure_filename(filename)
+    return filename.rsplit('.', 1)[1].lower() in {'mp4'}
 
 def get_video_duration(input_path):
     """Get video duration using ffmpeg"""
@@ -336,7 +368,8 @@ def process_video(task_id, input_path, output_path, settings):
     
     try:
         # Update task status to processing
-        tasks[task_id]['status'] = 'processing'
+        with task_lock():
+            tasks[task_id]['status'] = 'processing'
         save_tasks()
         
         # Verify paths and dependencies
@@ -348,8 +381,9 @@ def process_video(task_id, input_path, output_path, settings):
         
         # Get video info for progress tracking
         video_info = get_video_info(input_path)
-        tasks[task_id]['video_info'] = video_info
-        tasks[task_id]['total_frames'] = video_info['total_frames']
+        with task_lock():
+            tasks[task_id]['video_info'] = video_info
+            tasks[task_id]['total_frames'] = video_info['total_frames']
         save_tasks()
         
         # Construct STAR arguments
@@ -400,9 +434,10 @@ def process_video(task_id, input_path, output_path, settings):
                         progress = (current_frame / total_frames) * 100
                         
                         # Update task progress
-                        tasks[task_id]['current_frame'] = current_frame
-                        tasks[task_id]['total_frames'] = total_frames
-                        tasks[task_id]['progress'] = round(progress, 2)
+                        with task_lock():
+                            tasks[task_id]['current_frame'] = current_frame
+                            tasks[task_id]['total_frames'] = total_frames
+                            tasks[task_id]['progress'] = round(progress, 2)
                         save_tasks()
                     except Exception as e:
                         logger.error(f"Error parsing frame progress: {str(e)}")
@@ -444,9 +479,10 @@ def process_video(task_id, input_path, output_path, settings):
             raise Exception(f"STAR process failed with return code: {return_code}")
             
         # Update task status to complete
-        tasks[task_id]['status'] = 'complete'
-        tasks[task_id]['progress'] = 100
-        tasks[task_id]['download_url'] = f'/api/download/{task_id}'
+        with task_lock():
+            tasks[task_id]['status'] = 'complete'
+            tasks[task_id]['progress'] = 100
+            tasks[task_id]['download_url'] = f'/api/download/{task_id}'
         save_tasks()
         
         logger.info(f"Video processing completed successfully for task {task_id}")
@@ -454,8 +490,9 @@ def process_video(task_id, input_path, output_path, settings):
     except Exception as e:
         logger.error(f"Error in process_video: {str(e)}")
         logger.error(f"Full traceback: {traceback.format_exc()}")
-        tasks[task_id]['status'] = 'error'
-        tasks[task_id]['error'] = str(e)
+        with task_lock():
+            tasks[task_id]['status'] = 'error'
+            tasks[task_id]['error'] = str(e)
         save_tasks()
     finally:
         try:
@@ -473,81 +510,78 @@ def index():
 
 @app.route('/api/upload', methods=['POST'])
 def upload_video():
-    # Clear the backend log file at the start of each upload
-    open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend.log'), 'w').close()
-    logger.info('--- Upload request received ---')
-
-    # Check file size before accessing request.form or request.files
-    if request.content_length and request.content_length > app.config['MAX_CONTENT_LENGTH']:
-        return jsonify({'error': 'File too large'}), 400
-
+    """Handle video upload with proper validation and error handling"""
     try:
-        logger.info(f'Request form: {request.form}')
-        logger.info(f'Request files: {request.files}')
-        # Clean up old tasks
-        cleanup_old_tasks()
-        
-        # Ensure upload and processed directories exist
-        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-        os.makedirs(app.config['PROCESSED_FOLDER'], exist_ok=True)
-        
-        if 'video' not in request.files:
-            return jsonify({'error': 'No video file provided'}), 400
-            
-        file = request.files['video']
-        if file.filename == '':
-            return jsonify({'error': 'No selected file'}), 400
-            
-        if not allowed_file(file.filename):
-            return jsonify({'error': 'Invalid file type. Only MP4 files are allowed'}), 400
-            
-        # Parse settings
+        # Validate settings
         settings = {}
         if 'settings' in request.form:
             try:
                 settings = json.loads(request.form['settings'])
+                # Validate required settings
+                required_settings = ['scale', 'denoiseLevel', 'preserveDetails', 'quality', 'guideScale']
+                for setting in required_settings:
+                    if setting not in settings:
+                        return jsonify({'error': f'Missing required setting: {setting}'}), 400
             except json.JSONDecodeError:
-                return jsonify({'error': 'Invalid settings format'}), 400
-            
-        # Generate unique task ID and save file
-        task_id = str(uuid.uuid4())
+                return jsonify({'error': 'Invalid settings JSON'}), 400
+
+        # Validate file
+        if 'video' not in request.files:
+            return jsonify({'error': 'No video file provided'}), 400
+        
+        file = request.files['video']
+        if not file or not file.filename:
+            return jsonify({'error': 'No selected file'}), 400
+        
+        if not allowed_file(file.filename):
+            return jsonify({'error': 'Invalid file type'}), 400
+
+        # Generate unique filename
         filename = secure_filename(file.filename)
-        input_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{task_id}_{filename}")
-        output_path = os.path.join(app.config['PROCESSED_FOLDER'], f"{task_id}_upscaled_{filename}")
+        unique_filename = f"{uuid.uuid4()}_{filename}"
+        input_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
         
-        file.save(input_path)
+        # Save file with proper error handling
+        try:
+            file.save(input_path)
+        except Exception as e:
+            logger.error(f"Error saving file: {str(e)}")
+            return jsonify({'error': 'Error saving file'}), 500
+
+        # Create task
+        task_id = str(uuid.uuid4())
+        output_filename = f"processed_{unique_filename}"
+        output_path = os.path.join(app.config['PROCESSED_FOLDER'], output_filename)
         
-        # Initialize task status
-        tasks[task_id] = {
-            'status': 'pending',
-            'progress': 0,
-            'input_path': input_path,
-            'output_path': output_path,
-            'created_at': datetime.now(),
-            'filename': filename,
-            'settings': settings
-        }
-        save_tasks()  # Save after adding new task
+        with task_lock():
+            tasks[task_id] = {
+                'status': 'pending',
+                'progress': 0,
+                'input_path': input_path,
+                'output_path': output_path,
+                'settings': settings,
+                'created_at': datetime.now()
+            }
         
-        logger.info(f'File saved to: {input_path}')
-        logger.info(f'Task ID: {task_id}, Settings: {settings}')
-        logger.info(f'Starting processing thread for task {task_id}')
+        save_tasks()
+        
+        # Start processing in background
         thread = threading.Thread(
             target=process_video,
             args=(task_id, input_path, output_path, settings)
         )
         thread.daemon = True
         thread.start()
-        logger.info(f'Upload successful for task {task_id}')
+        
         return jsonify({
             'taskId': task_id,
-            'message': 'Video upload successful, processing started'
-        })
+            'message': 'Video upload successful'
+        }), 200
         
     except Exception as e:
-        logger.error(f'Error handling upload: {str(e)}')
-        logger.error(f'Full traceback: {traceback.format_exc()}')
-        return jsonify({'error': 'Server error processing upload'}), 500
+        logger.error(f"Error in upload_video: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/api/status/<task_id>', methods=['GET'])
 def get_status(task_id):
