@@ -1,6 +1,10 @@
 import random
 
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from typing import Dict, Any, Optional
+import numpy as np
 
 from .schedules_sdedit import karras_schedule
 from .solvers_sdedit import sample_dpmpp_2m_sde, sample_heun
@@ -16,28 +20,103 @@ def _i(tensor, t, x):
     shape = (x.size(0), ) + (1, ) * (x.ndim - 1)
     return tensor[t.to(tensor.device)].view(shape).to(x.device)
 
-class GaussianDiffusion(object):
-
-    def __init__(self, sigmas):
-        self.sigmas = sigmas
-        self.alphas = torch.sqrt(1 - sigmas**2)
-        self.num_timesteps = len(sigmas)
+class GaussianDiffusion(nn.Module):
+    def __init__(
+        self,
+        denoise_fn: nn.Module,
+        schedule: Dict[str, torch.Tensor],
+        timesteps: int = 1000,
+        loss_type: str = 'l2'
+    ):
+        super().__init__()
+        self.denoise_fn = denoise_fn
+        self.loss_type = loss_type
+        self.num_timesteps = timesteps
+        
+        # Register all schedule parameters as buffers
+        for k, v in schedule.items():
+            self.register_buffer(k, v)
+    
+    def q_sample(self, x_start: torch.Tensor, t: torch.Tensor, noise: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """Sample from q(x_t|x_0)."""
+        if noise is None:
+            noise = torch.randn_like(x_start)
+            
+        sqrt_alphas_cumprod_t = self.sqrt_alphas_cumprod[t]
+        sqrt_one_minus_alphas_cumprod_t = self.sqrt_one_minus_alphas_cumprod[t]
+        
+        return (
+            sqrt_alphas_cumprod_t.view(-1, 1, 1, 1) * x_start +
+            sqrt_one_minus_alphas_cumprod_t.view(-1, 1, 1, 1) * noise
+        )
+    
+    def p_losses(self, x_start: torch.Tensor, t: torch.Tensor, noise: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """Calculate loss for training."""
+        if noise is None:
+            noise = torch.randn_like(x_start)
+            
+        x_noisy = self.q_sample(x_start, t, noise)
+        predicted = self.denoise_fn(x_noisy, t)
+        
+        if self.loss_type == 'l1':
+            loss = F.l1_loss(predicted, noise)
+        elif self.loss_type == 'l2':
+            loss = F.mse_loss(predicted, noise)
+        else:
+            raise ValueError(f"Unknown loss type: {self.loss_type}")
+            
+        return loss
+    
+    def p_sample(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+        """Sample from p(x_{t-1}|x_t)."""
+        denoise_output = self.denoise_fn(x, t)
+        
+        alpha = self.alphas[t]
+        alpha_prev = self.alphas_cumprod_prev[t]
+        sigma = self.posterior_variance[t]
+        
+        # Compute mean
+        c1 = torch.sqrt(alpha_prev) * self.betas[t] / (1. - self.alphas_cumprod[t])
+        c2 = torch.sqrt(alpha) * (1. - alpha_prev) / (1. - self.alphas_cumprod[t])
+        mean = c1 * x + c2 * denoise_output
+        
+        # Add noise
+        noise = torch.randn_like(x) if t[0] > 0 else torch.zeros_like(x)
+        var = torch.sqrt(sigma) if t[0] > 0 else 0.
+        
+        return mean + var * noise
+    
+    def p_sample_loop(self, shape: tuple, device: torch.device) -> torch.Tensor:
+        """Sample from p(x_T) and denoise."""
+        b = shape[0]
+        img = torch.randn(shape, device=device)
+        
+        for i in reversed(range(self.num_timesteps)):
+            img = self.p_sample(img, torch.full((b,), i, device=device, dtype=torch.long))
+            
+        return img
+    
+    def forward(self, x: torch.Tensor, t: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """Forward pass."""
+        if t is None:
+            t = torch.randint(0, self.num_timesteps, (x.shape[0],), device=x.device).long()
+        return self.p_losses(x, t)
 
     def diffuse(self, x0, t, noise=None):
         noise = torch.randn_like(x0) if noise is None else noise
-        xt = _i(self.alphas, t, x0) * x0 + _i(self.sigmas, t, x0) * noise
+        xt = _i(self.sqrt_alphas_cumprod, t, x0) * x0 + _i(self.sqrt_one_minus_alphas_cumprod, t, x0) * noise
 
         return xt
 
     def get_velocity(self, x0, xt, t):
-        sigmas = _i(self.sigmas, t, xt)
-        alphas = _i(self.alphas, t, xt)
+        sigmas = _i(self.sqrt_one_minus_alphas_cumprod, t, xt)
+        alphas = _i(self.sqrt_alphas_cumprod, t, xt)
         velocity = (alphas * xt - x0) / sigmas
         return velocity
 
     def get_x0(self, v, xt, t):
-        sigmas = _i(self.sigmas, t, xt)
-        alphas = _i(self.alphas, t, xt)
+        sigmas = _i(self.sqrt_one_minus_alphas_cumprod, t, xt)
+        alphas = _i(self.sqrt_alphas_cumprod, t, xt)
         x0 = alphas * xt - sigmas * v
         return x0
 
@@ -55,9 +134,9 @@ class GaussianDiffusion(object):
         s = t - 1 if s is None else s
 
         # hyperparams
-        sigmas = _i(self.sigmas, t, xt)
-        alphas = _i(self.alphas, t, xt)
-        alphas_s = _i(self.alphas, s.clamp(0), xt)
+        sigmas = _i(self.sqrt_one_minus_alphas_cumprod, t, xt)
+        alphas = _i(self.sqrt_alphas_cumprod, t, xt)
+        alphas_s = _i(self.sqrt_one_minus_alphas_cumprod, s.clamp(0), xt)
         alphas_s[s < 0] = 1.
         sigmas_s = torch.sqrt(1 - alphas_s**2)
 
@@ -414,10 +493,10 @@ class GaussianDiffusion(object):
 
     def _sigma_to_t(self, sigma):
         if sigma == float('inf'):
-            t = torch.full_like(sigma, len(self.sigmas) - 1)
+            t = torch.full_like(sigma, len(self.sqrt_one_minus_alphas_cumprod) - 1)
         else:
-            log_sigmas = torch.sqrt(self.sigmas**2 /  # noqa
-                                    (1 - self.sigmas**2)).log().to(sigma)
+            log_sigmas = torch.sqrt(self.sqrt_alphas_cumprod**2 /  # noqa
+                                    (1 - self.sqrt_alphas_cumprod**2)).log().to(sigma)
             log_sigma = sigma.log()
             dists = log_sigma - log_sigmas[:, None]
             low_idx = dists.ge(0).cumsum(dim=0).argmax(dim=0).clamp(
@@ -435,8 +514,8 @@ class GaussianDiffusion(object):
     def _t_to_sigma(self, t):
         t = t.float()
         low_idx, high_idx, w = t.floor().long(), t.ceil().long(), t.frac()
-        log_sigmas = torch.sqrt(self.sigmas**2 /  # noqa
-                                (1 - self.sigmas**2)).log().to(t)
+        log_sigmas = torch.sqrt(self.sqrt_alphas_cumprod**2 /  # noqa
+                                (1 - self.sqrt_alphas_cumprod**2)).log().to(t)
         log_sigma = (1 - w) * log_sigmas[low_idx] + w * log_sigmas[high_idx]
         log_sigma[torch.isnan(log_sigma)
                   | torch.isinf(log_sigma)] = float('inf')

@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, send_file, send_from_directory, redirect
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
+from werkzeug.exceptions import RequestEntityTooLarge
 import logging
 from config import Config
 import sys
@@ -240,23 +241,37 @@ def get_star_args(settings, input_path, output_path):
     """Convert frontend settings to STAR model arguments"""
     try:
         # Validate scale factor
-        scale_factor = int(settings.get('upscaleFactor', 4))
+        scale_factor = int(settings.get('scale', 4))
         if scale_factor not in [2, 4, 8]:
             logger.warning(f"Invalid scale factor {scale_factor}, defaulting to 4")
             scale_factor = 4
 
-        # Map model names to their corresponding paths
-        model_map = {
-            'artemis': 'artemis.pth',
-            'gaia': 'gaia.pth',
-            'theia': 'theia.pth'
-        }
-        model_name = settings.get('model', 'artemis').lower()
-        model_file = model_map.get(model_name, 'artemis.pth')
-
         # Get other settings
         denoise_level = float(settings.get('denoiseLevel', 0))
-        preserve_details = settings.get('enhanceDetails', True)
+        preserve_details = settings.get('preserveDetails', True)
+        quality = settings.get('quality', 'balanced').lower()
+
+        # Map quality presets to model settings
+        quality_settings = {
+            'fast': {
+                'batch_size': '4',
+                'frame_stride': '16',
+                'resize_short_edge': '270'
+            },
+            'balanced': {
+                'batch_size': '2',
+                'frame_stride': '8',
+                'resize_short_edge': '360'
+            },
+            'quality': {
+                'batch_size': '1',
+                'frame_stride': '4',
+                'resize_short_edge': '480'
+            }
+        }
+
+        # Get settings for the selected quality preset
+        preset = quality_settings.get(quality, quality_settings['balanced'])
 
         return [
             '--input_path', input_path,
@@ -268,9 +283,9 @@ def get_star_args(settings, input_path, output_path):
             '--amp',
             '--num_workers', '8',
             '--pin_memory',
-            '--batch_size', '1',
-            '--frame_stride', '8',
-            '--resize_short_edge', '360'
+            '--batch_size', preset['batch_size'],
+            '--frame_stride', preset['frame_stride'],
+            '--resize_short_edge', preset['resize_short_edge']
         ] + (['--preserve_details'] if preserve_details else [])
     except Exception as e:
         logger.error(f"Error preparing STAR arguments: {str(e)}")
@@ -318,6 +333,11 @@ def process_video(task_id, input_path, output_path, settings):
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         )
         
+        # Get scale factor for progress calculation
+        scale_factor = int(settings.get('scale', 4))
+        if scale_factor not in [2, 4, 8]:
+            scale_factor = 4
+        
         # Monitor process and update progress
         while True:
             if process.poll() is not None:
@@ -326,7 +346,7 @@ def process_video(task_id, input_path, output_path, settings):
             # Update progress based on output file size
             if os.path.exists(output_path):
                 current_size = os.path.getsize(output_path)
-                expected_size = os.path.getsize(input_path) * settings.get('scale', 4)
+                expected_size = os.path.getsize(input_path) * scale_factor * scale_factor
                 progress = min(95, (current_size / expected_size) * 100)
                 tasks[task_id]['progress'] = progress
                 save_tasks()  # Save after updating progress
@@ -387,6 +407,11 @@ def upload_video():
     # Clear the backend log file at the start of each upload
     open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend.log'), 'w').close()
     logger.info('--- Upload request received ---')
+
+    # Check file size before accessing request.form or request.files
+    if request.content_length and request.content_length > app.config['MAX_CONTENT_LENGTH']:
+        return jsonify({'error': 'File too large'}), 400
+
     try:
         logger.info(f'Request form: {request.form}')
         logger.info(f'Request files: {request.files}')
@@ -406,10 +431,6 @@ def upload_video():
             
         if not allowed_file(file.filename):
             return jsonify({'error': 'Invalid file type. Only MP4 files are allowed'}), 400
-            
-        # Check file size
-        if request.content_length > app.config['MAX_CONTENT_LENGTH']:
-            return jsonify({'error': f"File too large. Maximum size is {app.config['MAX_CONTENT_LENGTH'] // (1024*1024)}MB"}), 400
             
         # Parse settings
         settings = {}
@@ -522,11 +543,11 @@ def test_api():
 # Add error handler for method not allowed
 @app.errorhandler(405)
 def method_not_allowed(e):
-    return jsonify({
-        'error': 'Method not allowed',
-        'message': f'The {request.method} method is not allowed for the requested URL.',
-        'allowed_methods': e.valid_methods
-    }), 405
+    return jsonify({'error': 'Method not allowed'}), 405
+
+@app.errorhandler(RequestEntityTooLarge)
+def request_entity_too_large(e):
+    return jsonify({'error': 'File too large'}), 400
 
 # Add route to serve test page
 @app.route('/test')

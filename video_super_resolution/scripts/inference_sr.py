@@ -435,17 +435,78 @@ def main():
             input_fps
         )
 
-def load_model(model_path, device):
-    # Load model implementation here
-    pass
+def load_model(model_path: str, device: str = 'cuda') -> VideoToVideo_sr:
+    """Load the model from checkpoint."""
+    # Load model configuration
+    config = {
+        'ch': 128,
+        'out_ch': 3,
+        'ch_mult': (1, 2, 4, 8),
+        'num_res_blocks': 2,
+        'attn_resolutions': [16],
+        'dropout': 0.0,
+        'resamp_with_conv': True,
+        'in_channels': 3,
+        'resolution': 256,
+        'z_channels': 4,
+        'double_z': True,
+        'use_linear_attn': False,
+        'attn_type': 'vanilla'
+    }
+    
+    # Initialize model
+    model = VideoToVideo_sr(
+        config,
+        embed_dim=4,
+        ckpt_path=model_path
+    )
+    
+    # Move model to device
+    model = model.to(device)
+    model.eval()
+    
+    return model
 
 def create_dataloader(input_path, batch_size, num_workers, pin_memory):
     # Create optimized data loader implementation here
     pass
 
-def process_video(model, dataloader, output_path, max_chunk_len, frame_stride, resize_short_edge, denoise_level, preserve_details, device, video_data, input_fps):
-    # Video processing implementation here
-    pass
+def process_video(
+    model: VideoToVideo_sr,
+    input_path: str,
+    output_path: str,
+    device: str = 'cuda',
+    batch_size: int = 1,
+    frame_stride: int = 1,
+    resize_short_edge: int = None,
+    preserve_details: bool = True
+) -> str:
+    """Process a video file using the model."""
+    # Load video
+    frames = load_video(input_path)
+    if not frames:
+        raise ValueError(f"Could not load video from {input_path}")
+    
+    # Process frames in batches
+    processed_frames = []
+    for i in tqdm(range(0, len(frames), batch_size * frame_stride)):
+        batch_frames = frames[i:i + batch_size * frame_stride:frame_stride]
+        
+        # Preprocess batch
+        batch_tensor = preprocess_frames(batch_frames, device)
+        
+        # Process batch
+        with torch.no_grad():
+            processed_batch = model.sample(batch_tensor)
+        
+        # Postprocess batch
+        processed_batch_frames = postprocess_frames(processed_batch)
+        processed_frames.extend(processed_batch_frames)
+    
+    # Save processed video
+    output_path = save_video(processed_frames, output_path)
+    
+    return output_path
 
 if __name__ == '__main__':
     main()

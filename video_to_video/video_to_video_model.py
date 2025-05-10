@@ -6,71 +6,110 @@ from typing import Any, Dict
 import torch
 import torch.cuda.amp as amp
 import torch.nn.functional as F
+import torch.nn as nn
+from safetensors.torch import load_file
 
-from video_to_video.modules import *
+from video_to_video.modules.autoencoder import AutoencoderKLTemporalDecoder
 from video_to_video.utils.config import cfg
 from video_to_video.diffusion.diffusion_sdedit import GaussianDiffusion
 from video_to_video.diffusion.schedules_sdedit import noise_schedule
 from video_to_video.utils.logger import get_logger
 
-from diffusers import AutoencoderKLTemporalDecoder
-
 logger = get_logger()
 
-class VideoToVideo_sr():
-    def __init__(self, opt, device=torch.device(f'cuda:0')):
-        self.opt = opt
-        self.device = device # torch.device(f'cuda:0')
-
-        # text_encoder
-        text_encoder = FrozenOpenCLIPEmbedder(device=self.device, pretrained="laion2b_s32b_b79k")
-        text_encoder.model.to(self.device)
-        self.text_encoder = text_encoder
-        logger.info(f'Build encoder with FrozenOpenCLIPEmbedder')
-
-        # U-Net with ControlNet
-        generator = ControlledV2VUNet()
-        generator = generator.to(self.device)
-        generator.eval()
-
-        cfg.model_path = opt.model_path
-        load_dict = torch.load(cfg.model_path, map_location='cpu')
-        if 'state_dict' in load_dict:
-            load_dict = load_dict['state_dict']
-        ret = generator.load_state_dict(load_dict, strict=False)
+class VideoToVideo_sr(nn.Module):
+    def __init__(self, cfg: Dict[str, Any]):
+        super().__init__()
+        self.cfg = cfg
         
-        self.generator = generator.half()
-        logger.info('Load model path {}, with local status {}'.format(cfg.model_path, ret))
-
-        # Noise scheduler
-        sigmas = noise_schedule(
-            schedule='logsnr_cosine_interp',
-            n=1000,
-            zero_terminal_snr=True,
-            scale_min=2.0,
-            scale_max=4.0)
-        diffusion = GaussianDiffusion(sigmas=sigmas)
-        self.diffusion = diffusion
-        logger.info('Build diffusion with GaussianDiffusion')
-
-        # Temporal VAE
-        vae = AutoencoderKLTemporalDecoder.from_pretrained(
-            "stabilityai/stable-video-diffusion-img2vid", subfolder="vae", variant="fp16"
+        # Initialize autoencoder
+        autoencoder_config = {
+            'ch': 128,
+            'out_ch': 3,
+            'ch_mult': (1, 2, 4, 8),
+            'num_res_blocks': 2,
+            'attn_resolutions': [16],
+            'dropout': 0.0,
+            'resamp_with_conv': True,
+            'in_channels': 3,
+            'resolution': 256,
+            'z_channels': 4,
+            'double_z': True,
+            'use_linear_attn': False,
+            'attn_type': 'vanilla',
+            'loss': {
+                'target': 'video_to_video.modules.losses.LPIPSWithDiscriminator',
+                'params': {
+                    'disc_start': 50001,
+                    'kl_weight': 0.000001,
+                    'disc_weight': 0.5
+                }
+            }
+        }
+        self.autoencoder = AutoencoderKLTemporalDecoder(
+            ddconfig=autoencoder_config,
+            embed_dim=4,
+            ckpt_path=None
         )
-        vae.eval()
-        vae.requires_grad_(False)
-        vae.to(self.device)
-        self.vae = vae
-        logger.info('Build Temporal VAE')
-
-        torch.cuda.empty_cache()
-
-        self.negative_prompt = cfg.negative_prompt
-        self.positive_prompt = cfg.positive_prompt
-
-        negative_y = text_encoder(self.negative_prompt).detach()
-        self.negative_y = negative_y
-
+        
+        # Initialize diffusion model
+        self.diffusion = GaussianDiffusion(
+            denoise_fn=self.autoencoder,
+            schedule=noise_schedule(timesteps=1000),
+            timesteps=1000,
+            loss_type='l2'
+        )
+        
+        # Load model weights with better error handling
+        try:
+            # First try loading as safetensors
+            if cfg.model_path.endswith('.safetensors'):
+                state_dict = load_file(cfg.model_path)
+                self.load_state_dict(state_dict)
+            else:
+                # Try loading as PyTorch checkpoint
+                try:
+                    # First try with weights_only=True
+                    try:
+                        load_dict = torch.load(cfg.model_path, map_location='cpu', weights_only=True)
+                    except Exception as e:
+                        logger.warning(f"Failed to load with weights_only=True, trying without: {e}")
+                        load_dict = torch.load(cfg.model_path, map_location='cpu')
+                    
+                    if isinstance(load_dict, dict) and 'state_dict' in load_dict:
+                        self.load_state_dict(load_dict['state_dict'])
+                    else:
+                        self.load_state_dict(load_dict)
+                except Exception as e:
+                    logger.error(f"Error loading model as PyTorch checkpoint: {e}")
+                    raise
+        except Exception as e:
+            logger.error(f"Failed to load model from {cfg.model_path}: {e}")
+            raise RuntimeError(f"Model loading failed: {str(e)}")
+        
+        # Freeze autoencoder parameters
+        for param in self.autoencoder.parameters():
+            param.requires_grad = False
+    
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass through the model."""
+        return self.diffusion(x)
+    
+    def sample(self, x: torch.Tensor) -> torch.Tensor:
+        """Generate a sample from the model."""
+        return self.diffusion.sample(x)
+    
+    def encode(self, x: torch.Tensor) -> torch.Tensor:
+        """Encode input using the autoencoder."""
+        return self.autoencoder.encode(x)
+    
+    def decode(self, z: torch.Tensor) -> torch.Tensor:
+        """Decode latent representation using the autoencoder."""
+        return self.autoencoder.decode(z)
+    
+    def get_last_layer(self) -> torch.Tensor:
+        """Get the last layer of the model."""
+        return self.autoencoder.get_last_layer()
 
     def test(self, input: Dict[str, Any], total_noise_levels=1000, \
                  steps=50, solver_mode='fast', guide_scale=7.5, max_chunk_len=32):
