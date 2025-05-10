@@ -796,5 +796,43 @@
       "total_frames": 78
     },
     "total_frames": 78
+  },
+  "6b86f4b5-6811-4963-9de5-528654e8afb1": {
+    "status": "processing",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\6b86f4b5-6811-4963-9de5-528654e8afb1_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\6b86f4b5-6811-4963-9de5-528654e8afb1_upscaled_test.mp4",
+    "created_at": "2025-05-10T15:56:21.086199",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "quality": "balanced",
+      "denoiseLevel": 0,
+      "preserveDetails": true
+    },
+    "video_info": {
+      "fps": 30.0,
+      "total_frames": 136
+    },
+    "total_frames": 136
+  },
+  "95f3808c-07ae-4ef9-9de8-7b9670aa540a": {
+    "status": "processing",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\95f3808c-07ae-4ef9-9de8-7b9670aa540a_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\95f3808c-07ae-4ef9-9de8-7b9670aa540a_upscaled_test.mp4",
+    "created_at": "2025-05-10T15:58:01.657511",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "quality": "balanced",
+      "denoiseLevel": 0,
+      "preserveDetails": true
+    },
+    "video_info": {
+      "fps": 30.0,
+      "total_frames": 136
+    },
+    "total_frames": 136
   }
 }

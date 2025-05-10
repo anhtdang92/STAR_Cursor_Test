@@ -3,7 +3,7 @@ import json
 import time
 
 # Video file path
-video_path = 'input/video/test.mp4'
+video_path = 'input/video/star_test_gta6.mp4'
 
 # Settings
 settings = {
