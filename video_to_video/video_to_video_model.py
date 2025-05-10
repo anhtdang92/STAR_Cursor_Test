@@ -14,6 +14,7 @@ from video_to_video.utils.config import cfg
 from video_to_video.diffusion.diffusion_sdedit import GaussianDiffusion
 from video_to_video.diffusion.schedules_sdedit import noise_schedule
 from video_to_video.utils.logger import get_logger
+from debug_utils import ModelDebugger, debug_cuda_memory, debug_system_resources, debug_model_parameters, timing_decorator
 
 logger = get_logger()
 
@@ -21,6 +22,10 @@ class VideoToVideo_sr(nn.Module):
     def __init__(self, cfg: Dict[str, Any]):
         super().__init__()
         self.cfg = cfg
+        
+        # Log system and CUDA information
+        debug_system_resources()
+        debug_cuda_memory()
         
         # Initialize autoencoder
         autoencoder_config = {
@@ -46,6 +51,8 @@ class VideoToVideo_sr(nn.Module):
                 }
             }
         }
+        
+        logger.info("Initializing autoencoder...")
         self.autoencoder = AutoencoderKLTemporalDecoder(
             ddconfig=autoencoder_config,
             embed_dim=4,
@@ -53,6 +60,7 @@ class VideoToVideo_sr(nn.Module):
         )
         
         # Initialize diffusion model
+        logger.info("Initializing diffusion model...")
         self.diffusion = GaussianDiffusion(
             denoise_fn=self.autoencoder,
             schedule=noise_schedule(timesteps=1000),
@@ -60,8 +68,11 @@ class VideoToVideo_sr(nn.Module):
             loss_type='l2'
         )
         
-        # Load model weights with better error handling
+        # Load model weights with better error handling and debugging
         try:
+            logger.info(f"Loading model weights from {cfg.model_path}")
+            debug_cuda_memory()  # Log memory before loading
+            
             # First try loading as safetensors
             if cfg.model_path.endswith('.safetensors'):
                 state_dict = load_file(cfg.model_path)
@@ -83,25 +94,68 @@ class VideoToVideo_sr(nn.Module):
                 except Exception as e:
                     logger.error(f"Error loading model as PyTorch checkpoint: {e}")
                     raise
+                    
+            debug_cuda_memory()  # Log memory after loading
+            debug_model_parameters(self)  # Log model parameters
+            
         except Exception as e:
             logger.error(f"Failed to load model from {cfg.model_path}: {e}")
             raise RuntimeError(f"Model loading failed: {str(e)}")
+        
+        # Initialize model debugger
+        self.debugger = ModelDebugger(self)
         
         # Freeze autoencoder parameters
         for param in self.autoencoder.parameters():
             param.requires_grad = False
     
+    @timing_decorator
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass through the model."""
-        return self.diffusion(x)
+        """Forward pass through the model with timing and debugging."""
+        debug_cuda_memory()
+        debug_system_resources()
+        
+        # Register hooks for debugging if needed
+        self.debugger.register_hooks()
+        
+        try:
+            output = self.diffusion(x)
+            return output
+        finally:
+            # Always remove hooks
+            self.debugger.remove_hooks()
     
+    @timing_decorator
     def sample(self, x: torch.Tensor) -> torch.Tensor:
-        """Generate a sample from the model."""
-        return self.diffusion.sample(x)
+        """Generate a sample from the model with timing and debugging."""
+        debug_cuda_memory()
+        debug_system_resources()
+        
+        # Register hooks for debugging if needed
+        self.debugger.register_hooks()
+        
+        try:
+            output = self.diffusion.sample(x)
+            return output
+        finally:
+            # Always remove hooks
+            self.debugger.remove_hooks()
     
+    @timing_decorator
     def encode(self, x: torch.Tensor) -> torch.Tensor:
-        """Encode input using the autoencoder."""
-        return self.autoencoder.encode(x)
+        """Encode input using the autoencoder with timing and debugging."""
+        debug_cuda_memory()
+        debug_system_resources()
+        
+        # Register hooks for debugging if needed
+        self.debugger.register_hooks()
+        
+        try:
+            output = self.autoencoder.encode(x)
+            return output
+        finally:
+            # Always remove hooks
+            self.debugger.remove_hooks()
     
     def decode(self, z: torch.Tensor) -> torch.Tensor:
         """Decode latent representation using the autoencoder."""
