@@ -15,6 +15,9 @@ import traceback
 import logging
 from datetime import datetime
 import sys
+import contextlib
+import io
+import builtins
 
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 sys.path.append(base_path)
@@ -24,6 +27,13 @@ from video_to_video.utils.logger import get_logger
 from video_super_resolution.color_fix import adain_color_fix
 
 from inference_utils import *
+
+# Suppress PyTorch's verbose output
+def _suppress_print(*args, **kwargs):
+    pass
+
+# Store original print function
+_original_print = print
 
 def setup_logging(log_level='WARNING'):
     """Set up logging configuration for testing inference SR script."""
@@ -381,7 +391,15 @@ class STAR():
         try:
             logger.info(f"Loading VideoToVideo_sr model from path: {model_path}")
             print(f"Loading VideoToVideo_sr model from path: {model_path}", flush=True)
-            self.model = VideoToVideo_sr(EasyDict(model_path=model_path))
+            
+            # Temporarily replace print function
+            builtins.print = _suppress_print
+            try:
+                self.model = VideoToVideo_sr(EasyDict(model_path=model_path))
+            finally:
+                # Restore original print function
+                builtins.print = _original_print
+            
             logger.info("VideoToVideo_sr model loaded successfully.")
             print("VideoToVideo_sr model loaded successfully.", flush=True)
             
@@ -628,8 +646,12 @@ if __name__ == "__main__":
         print(traceback.format_exc(), flush=True)
         sys.exit(1)
 
-def load_model(model_path: str, device: str = 'cuda') -> VideoToVideo_sr:
-    """Load the model from checkpoint."""
+def load_model(model_path, device='cuda'):
+    """Load the model from checkpoint with timing and debugging."""
+    logger.info("Loading model...")
+    debug_cuda_memory()
+    debug_system_resources()
+    
     # Load model configuration
     config = {
         'ch': 128,
@@ -658,6 +680,8 @@ def load_model(model_path: str, device: str = 'cuda') -> VideoToVideo_sr:
     model = model.to(device)
     model.eval()
     
+    logger.info("Model loaded successfully")
+    debug_cuda_memory()
     return model
 
 def create_dataloader(input_path, batch_size, num_workers, pin_memory):
