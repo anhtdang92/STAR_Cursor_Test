@@ -184,5 +184,557 @@
       "preserveDetails": true
     },
     "error": "WARNING[XFORMERS]: xFormers can't load C++/CUDA extensions. xFormers was built for:\n    PyTorch 2.7.0+cpu with CUDA None (you have 2.5.1+cu121)\n    Python  3.12.6 (you have 3.12.6)\n  Please reinstall xformers (see https://github.com/facebookresearch/xformers#installing-xformers)\n  Memory-efficient attention, SwiGLU, sparse and more won't be available.\n  Set XFORMERS_MORE_DETAILS=1 for more details\nA matching Triton is not available, some optimizations will not be enabled.\nError caught was: No module named 'triton'\nF:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\xformers\\ops\\swiglu_op.py:106: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.\n  @torch.cuda.amp.custom_fwd\nF:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\xformers\\ops\\swiglu_op.py:127: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.\n  @torch.cuda.amp.custom_bwd\nTraceback (most recent call last):\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_super_resolution\\scripts\\inference_sr.py\", line 512, in <module>\n    main()\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_super_resolution\\scripts\\inference_sr.py\", line 412, in main\n    model = VideoToVideo_sr(EasyDict(model_path=model_path))\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\video_to_video_model.py\", line 43, in __init__\n    self.autoencoder = AutoencoderKLTemporalDecoder(\n                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\diffusers\\configuration_utils.py\", line 693, in inner_init\n    init(self, *args, **init_kwargs)\nTypeError: AutoencoderKLTemporalDecoder.__init__() got an unexpected keyword argument 'ddconfig'\n"
+  },
+  "773b8124-8c67-44f8-9e0c-a7a68305fe9c": {
+    "status": "error",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\773b8124-8c67-44f8-9e0c-a7a68305fe9c_023_klingai_reedit.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\773b8124-8c67-44f8-9e0c-a7a68305fe9c_upscaled_023_klingai_reedit.mp4",
+    "created_at": "2025-05-10T10:47:25.302822",
+    "filename": "023_klingai_reedit.mp4",
+    "settings": {
+      "scale": 4,
+      "quality": "balanced",
+      "denoiseLevel": 0,
+      "preserveDetails": true
+    },
+    "error": "WARNING[XFORMERS]: xFormers can't load C++/CUDA extensions. xFormers was built for:\n    PyTorch 2.7.0+cpu with CUDA None (you have 2.5.1+cu121)\n    Python  3.12.6 (you have 3.12.6)\n  Please reinstall xformers (see https://github.com/facebookresearch/xformers#installing-xformers)\n  Memory-efficient attention, SwiGLU, sparse and more won't be available.\n  Set XFORMERS_MORE_DETAILS=1 for more details\nA matching Triton is not available, some optimizations will not be enabled.\nError caught was: No module named 'triton'\nF:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\xformers\\ops\\swiglu_op.py:106: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.\n  @torch.cuda.amp.custom_fwd\nF:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\xformers\\ops\\swiglu_op.py:127: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.\n  @torch.cuda.amp.custom_bwd\nTraceback (most recent call last):\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_super_resolution\\scripts\\inference_sr.py\", line 18, in <module>\n    from video_to_video.video_to_video_model import VideoToVideo_sr\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\video_to_video_model.py\", line 17, in <module>\n    from debug_utils import ModelDebugger, debug_cuda_memory, debug_system_resources, debug_model_parameters, timing_decorator\nModuleNotFoundError: No module named 'debug_utils'\n"
+  },
+  "d16ee7d4-fa38-416a-bf79-9506953e2176": {
+    "status": "error",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\d16ee7d4-fa38-416a-bf79-9506953e2176_023_klingai_reedit.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\d16ee7d4-fa38-416a-bf79-9506953e2176_upscaled_023_klingai_reedit.mp4",
+    "created_at": "2025-05-10T10:55:53.926245",
+    "filename": "023_klingai_reedit.mp4",
+    "settings": {
+      "scale": 4,
+      "quality": "balanced",
+      "denoiseLevel": 0,
+      "preserveDetails": true
+    },
+    "error": "WARNING[XFORMERS]: xFormers can't load C++/CUDA extensions. xFormers was built for:\n    PyTorch 2.7.0+cpu with CUDA None (you have 2.5.1+cu121)\n    Python  3.12.6 (you have 3.12.6)\n  Please reinstall xformers (see https://github.com/facebookresearch/xformers#installing-xformers)\n  Memory-efficient attention, SwiGLU, sparse and more won't be available.\n  Set XFORMERS_MORE_DETAILS=1 for more details\nA matching Triton is not available, some optimizations will not be enabled.\nError caught was: No module named 'triton'\nF:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\xformers\\ops\\swiglu_op.py:106: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.\n  @torch.cuda.amp.custom_fwd\nF:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\xformers\\ops\\swiglu_op.py:127: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.\n  @torch.cuda.amp.custom_bwd\nTraceback (most recent call last):\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_super_resolution\\scripts\\inference_sr.py\", line 18, in <module>\n    from video_to_video.video_to_video_model import VideoToVideo_sr\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\video_to_video_model.py\", line 17, in <module>\n    from backend.debug_utils import ModelDebugger, debug_cuda_memory, debug_system_resources, debug_model_parameters, timing_decorator\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\backend\\debug_utils.py\", line 6, in <module>\n    import GPUtil\nModuleNotFoundError: No module named 'GPUtil'\n"
+  },
+  "3506f90c-12f9-4e1c-8dc4-ea82bb8ea46b": {
+    "status": "processing",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\3506f90c-12f9-4e1c-8dc4-ea82bb8ea46b_023_klingai_reedit.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\3506f90c-12f9-4e1c-8dc4-ea82bb8ea46b_upscaled_023_klingai_reedit.mp4",
+    "created_at": "2025-05-10T10:59:53.023677",
+    "filename": "023_klingai_reedit.mp4",
+    "settings": {
+      "scale": 4,
+      "quality": "balanced",
+      "denoiseLevel": 0,
+      "preserveDetails": true
+    }
+  },
+  "9413ff9d-5e57-47c1-8778-a475107e3574": {
+    "status": "error",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\9413ff9d-5e57-47c1-8778-a475107e3574_023_klingai_reedit.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\9413ff9d-5e57-47c1-8778-a475107e3574_upscaled_023_klingai_reedit.mp4",
+    "created_at": "2025-05-10T11:08:32.744786",
+    "filename": "023_klingai_reedit.mp4",
+    "settings": {
+      "scale": 4,
+      "quality": "balanced",
+      "denoiseLevel": 0,
+      "preserveDetails": true
+    },
+    "error": "WARNING[XFORMERS]: xFormers can't load C++/CUDA extensions. xFormers was built for:\n    PyTorch 2.7.0+cpu with CUDA None (you have 2.5.1+cu121)\n    Python  3.12.6 (you have 3.12.6)\n  Please reinstall xformers (see https://github.com/facebookresearch/xformers#installing-xformers)\n  Memory-efficient attention, SwiGLU, sparse and more won't be available.\n  Set XFORMERS_MORE_DETAILS=1 for more details\nA matching Triton is not available, some optimizations will not be enabled.\nError caught was: No module named 'triton'\nF:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\xformers\\ops\\swiglu_op.py:106: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.\n  @torch.cuda.amp.custom_fwd\nF:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\xformers\\ops\\swiglu_op.py:127: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.\n  @torch.cuda.amp.custom_bwd\nTraceback (most recent call last):\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_super_resolution\\scripts\\inference_sr.py\", line 18, in <module>\n    from video_to_video.video_to_video_model import VideoToVideo_sr\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\video_to_video_model.py\", line 17, in <module>\n    from backend.debug_utils import ModelDebugger, debug_cuda_memory, debug_system_resources, debug_model_parameters, timing_decorator\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\backend\\debug_utils.py\", line 6, in <module>\n    import GPUtil\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\GPUtil\\__init__.py\", line 33, in <module>\n    from .GPUtil import GPU, getGPUs, getAvailable, getAvailability, getFirstAvailable, showUtilization, __version__\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\GPUtil\\GPUtil.py\", line 34, in <module>\n    from distutils import spawn\nModuleNotFoundError: No module named 'distutils'\n"
+  },
+  "d3e5d157-bf4e-4786-82fd-90852fd05e4b": {
+    "status": "error",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\d3e5d157-bf4e-4786-82fd-90852fd05e4b_023_klingai_reedit.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\d3e5d157-bf4e-4786-82fd-90852fd05e4b_upscaled_023_klingai_reedit.mp4",
+    "created_at": "2025-05-10T11:12:49.463297",
+    "filename": "023_klingai_reedit.mp4",
+    "settings": {
+      "scale": 4,
+      "quality": "balanced",
+      "denoiseLevel": 0,
+      "preserveDetails": true
+    },
+    "error": "WARNING[XFORMERS]: xFormers can't load C++/CUDA extensions. xFormers was built for:\n    PyTorch 2.7.0+cpu with CUDA None (you have 2.5.1+cu121)\n    Python  3.12.6 (you have 3.12.6)\n  Please reinstall xformers (see https://github.com/facebookresearch/xformers#installing-xformers)\n  Memory-efficient attention, SwiGLU, sparse and more won't be available.\n  Set XFORMERS_MORE_DETAILS=1 for more details\nA matching Triton is not available, some optimizations will not be enabled.\nError caught was: No module named 'triton'\nF:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\xformers\\ops\\swiglu_op.py:106: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.\n  @torch.cuda.amp.custom_fwd\nF:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\xformers\\ops\\swiglu_op.py:127: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.\n  @torch.cuda.amp.custom_bwd\nTraceback (most recent call last):\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_super_resolution\\scripts\\inference_sr.py\", line 18, in <module>\n    from video_to_video.video_to_video_model import VideoToVideo_sr\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\video_to_video_model.py\", line 17, in <module>\n    from backend.debug_utils import ModelDebugger, debug_cuda_memory, debug_system_resources, debug_model_parameters, timing_decorator\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\backend\\debug_utils.py\", line 6, in <module>\n    import GPUtil\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\GPUtil\\__init__.py\", line 33, in <module>\n    from .GPUtil import GPU, getGPUs, getAvailable, getAvailability, getFirstAvailable, showUtilization, __version__\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\GPUtil\\GPUtil.py\", line 34, in <module>\n    from distutils import spawn\nModuleNotFoundError: No module named 'distutils'\n"
+  },
+  "d9aa25fa-fe1d-436b-88c3-c3064f7b10cc": {
+    "status": "error",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\d9aa25fa-fe1d-436b-88c3-c3064f7b10cc_023_klingai_reedit.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\d9aa25fa-fe1d-436b-88c3-c3064f7b10cc_upscaled_023_klingai_reedit.mp4",
+    "created_at": "2025-05-10T12:42:18.159653",
+    "filename": "023_klingai_reedit.mp4",
+    "settings": {
+      "scale": 4,
+      "quality": "balanced",
+      "denoiseLevel": 0,
+      "preserveDetails": true
+    },
+    "error": "Traceback (most recent call last):\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_super_resolution\\scripts\\inference_sr.py\", line 18, in <module>\n    from video_to_video.video_to_video_model import VideoToVideo_sr\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\video_to_video_model.py\", line 12, in <module>\n    from video_to_video.modules.autoencoder import AutoencoderKLTemporalDecoder\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\modules\\__init__.py\", line 1, in <module>\n    from .embedder import *\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\modules\\embedder.py\", line 6, in <module>\n    import open_clip\nModuleNotFoundError: No module named 'open_clip'\n"
+  },
+  "476d3f14-179d-4b9d-905e-c3f4739d614d": {
+    "status": "error",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\476d3f14-179d-4b9d-905e-c3f4739d614d_023_klingai_reedit.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\476d3f14-179d-4b9d-905e-c3f4739d614d_upscaled_023_klingai_reedit.mp4",
+    "created_at": "2025-05-10T12:44:24.300631",
+    "filename": "023_klingai_reedit.mp4",
+    "settings": {
+      "scale": 4,
+      "quality": "balanced",
+      "denoiseLevel": 0,
+      "preserveDetails": true
+    },
+    "error": "F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\timm\\models\\layers\\__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers\n  warnings.warn(f\"Importing from {__name__} is deprecated, please import via timm.layers\", FutureWarning)\nTraceback (most recent call last):\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_super_resolution\\scripts\\inference_sr.py\", line 18, in <module>\n    from video_to_video.video_to_video_model import VideoToVideo_sr\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\video_to_video_model.py\", line 12, in <module>\n    from video_to_video.modules.autoencoder import AutoencoderKLTemporalDecoder\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\modules\\__init__.py\", line 2, in <module>\n    from .unet_v2v import *\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\modules\\unet_v2v.py\", line 10, in <module>\n    import xformers\nModuleNotFoundError: No module named 'xformers'\n"
+  },
+  "73bdf807-ccfe-4638-bf3f-a4888a50f2b9": {
+    "status": "error",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\73bdf807-ccfe-4638-bf3f-a4888a50f2b9_023_klingai_reedit.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\73bdf807-ccfe-4638-bf3f-a4888a50f2b9_upscaled_023_klingai_reedit.mp4",
+    "created_at": "2025-05-10T12:49:56.985577",
+    "filename": "023_klingai_reedit.mp4",
+    "settings": {
+      "scale": 4,
+      "quality": "balanced",
+      "denoiseLevel": 0,
+      "preserveDetails": true
+    },
+    "error": "F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\timm\\models\\layers\\__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers\n  warnings.warn(f\"Importing from {__name__} is deprecated, please import via timm.layers\", FutureWarning)\nWARNING[XFORMERS]: xFormers can't load C++/CUDA extensions. xFormers was built for:\n    PyTorch 2.7.0+cu126 with CUDA 1206 (you have 2.2.2+cu121)\n    Python  3.12.10 (you have 3.12.6)\n  Please reinstall xformers (see https://github.com/facebookresearch/xformers#installing-xformers)\n  Memory-efficient attention, SwiGLU, sparse and more won't be available.\n  Set XFORMERS_MORE_DETAILS=1 for more details\nTraceback (most recent call last):\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_super_resolution\\scripts\\inference_sr.py\", line 18, in <module>\n    from video_to_video.video_to_video_model import VideoToVideo_sr\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\video_to_video_model.py\", line 12, in <module>\n    from video_to_video.modules.autoencoder import AutoencoderKLTemporalDecoder\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\modules\\__init__.py\", line 2, in <module>\n    from .unet_v2v import *\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\modules\\unet_v2v.py\", line 11, in <module>\n    import xformers.ops\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\xformers\\ops\\__init__.py\", line 9, in <module>\n    from .fmha import (\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\xformers\\ops\\fmha\\__init__.py\", line 10, in <module>\n    from . import (\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\xformers\\ops\\fmha\\flash.py\", line 49, in <module>\n    torch.version.hip is None and torch.backends.cuda.is_flash_attention_available()\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: module 'torch.backends.cuda' has no attribute 'is_flash_attention_available'\n"
+  },
+  "cf58b300-a751-4a8c-9ed7-bb8731d4532e": {
+    "status": "error",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\cf58b300-a751-4a8c-9ed7-bb8731d4532e_023_klingai_reedit.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\cf58b300-a751-4a8c-9ed7-bb8731d4532e_upscaled_023_klingai_reedit.mp4",
+    "created_at": "2025-05-10T12:58:20.834422",
+    "filename": "023_klingai_reedit.mp4",
+    "settings": {
+      "scale": 4,
+      "quality": "balanced",
+      "denoiseLevel": 0,
+      "preserveDetails": true
+    },
+    "error": "F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\timm\\models\\layers\\__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers\n  warnings.warn(f\"Importing from {__name__} is deprecated, please import via timm.layers\", FutureWarning)\nWARNING[XFORMERS]: xFormers can't load C++/CUDA extensions. xFormers was built for:\n    PyTorch 2.7.0+cu126 with CUDA 1206 (you have 2.2.2+cu121)\n    Python  3.12.10 (you have 3.12.6)\n  Please reinstall xformers (see https://github.com/facebookresearch/xformers#installing-xformers)\n  Memory-efficient attention, SwiGLU, sparse and more won't be available.\n  Set XFORMERS_MORE_DETAILS=1 for more details\nTraceback (most recent call last):\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_super_resolution\\scripts\\inference_sr.py\", line 18, in <module>\n    from video_to_video.video_to_video_model import VideoToVideo_sr\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\video_to_video_model.py\", line 12, in <module>\n    from video_to_video.modules.autoencoder import AutoencoderKLTemporalDecoder\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\modules\\__init__.py\", line 2, in <module>\n    from .unet_v2v import *\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\modules\\unet_v2v.py\", line 11, in <module>\n    import xformers.ops\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\xformers\\ops\\__init__.py\", line 9, in <module>\n    from .fmha import (\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\xformers\\ops\\fmha\\__init__.py\", line 10, in <module>\n    from . import (\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\xformers\\ops\\fmha\\flash.py\", line 55, in <module>\n    from ... import _C_flashattention  # type: ignore[attr-defined]\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nImportError: DLL load failed while importing _C_flashattention: The specified procedure could not be found.\n"
+  },
+  "4d318c6f-c011-488b-9643-985be849841c": {
+    "status": "error",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\4d318c6f-c011-488b-9643-985be849841c_023_klingai_reedit.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\4d318c6f-c011-488b-9643-985be849841c_upscaled_023_klingai_reedit.mp4",
+    "created_at": "2025-05-10T13:04:15.019313",
+    "filename": "023_klingai_reedit.mp4",
+    "settings": {
+      "scale": 4,
+      "quality": "balanced",
+      "denoiseLevel": 0,
+      "preserveDetails": true
+    },
+    "error": "F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\timm\\models\\layers\\__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers\n  warnings.warn(f\"Importing from {__name__} is deprecated, please import via timm.layers\", FutureWarning)\nTraceback (most recent call last):\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_super_resolution\\scripts\\inference_sr.py\", line 18, in <module>\n    from video_to_video.video_to_video_model import VideoToVideo_sr\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\video_to_video_model.py\", line 12, in <module>\n    from video_to_video.modules.autoencoder import AutoencoderKLTemporalDecoder\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\modules\\__init__.py\", line 2, in <module>\n    from .unet_v2v import *\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\modules\\unet_v2v.py\", line 12, in <module>\n    from einops import rearrange\nModuleNotFoundError: No module named 'einops'\n"
+  },
+  "ee1b6987-f5fa-4ea9-a1cd-1fb2b4d80106": {
+    "status": "error",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\ee1b6987-f5fa-4ea9-a1cd-1fb2b4d80106_023_klingai_reedit.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\ee1b6987-f5fa-4ea9-a1cd-1fb2b4d80106_upscaled_023_klingai_reedit.mp4",
+    "created_at": "2025-05-10T13:28:54.039406",
+    "filename": "023_klingai_reedit.mp4",
+    "settings": {
+      "scale": 4,
+      "quality": "balanced",
+      "denoiseLevel": 0,
+      "preserveDetails": true
+    },
+    "error": "F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\timm\\models\\layers\\__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers\n  warnings.warn(f\"Importing from {__name__} is deprecated, please import via timm.layers\", FutureWarning)\nTraceback (most recent call last):\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_super_resolution\\scripts\\inference_sr.py\", line 18, in <module>\n    from video_to_video.video_to_video_model import VideoToVideo_sr\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\video_to_video_model.py\", line 12, in <module>\n    from video_to_video.modules.autoencoder import AutoencoderKLTemporalDecoder\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\modules\\__init__.py\", line 2, in <module>\n    from .unet_v2v import *\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\modules\\unet_v2v.py\", line 13, in <module>\n    from fairscale.nn.checkpoint import checkpoint_wrapper\nModuleNotFoundError: No module named 'fairscale'\n"
+  },
+  "970e7c0d-c951-44cd-b315-d1d70deab748": {
+    "status": "error",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\970e7c0d-c951-44cd-b315-d1d70deab748_023_klingai_reedit.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\970e7c0d-c951-44cd-b315-d1d70deab748_upscaled_023_klingai_reedit.mp4",
+    "created_at": "2025-05-10T13:33:34.964167",
+    "filename": "023_klingai_reedit.mp4",
+    "settings": {
+      "scale": 4,
+      "quality": "balanced",
+      "denoiseLevel": 0,
+      "preserveDetails": true
+    },
+    "error": "F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\timm\\models\\layers\\__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers\n  warnings.warn(f\"Importing from {__name__} is deprecated, please import via timm.layers\", FutureWarning)\nWARNING[XFORMERS]: xFormers can't load C++/CUDA extensions. xFormers was built for:\n    PyTorch 2.7.0+cu126 with CUDA 1206 (you have 2.2.2+cu121)\n    Python  3.12.10 (you have 3.12.6)\n  Please reinstall xformers (see https://github.com/facebookresearch/xformers#installing-xformers)\n  Memory-efficient attention, SwiGLU, sparse and more won't be available.\n  Set XFORMERS_MORE_DETAILS=1 for more details\nTraceback (most recent call last):\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_super_resolution\\scripts\\inference_sr.py\", line 18, in <module>\n    from video_to_video.video_to_video_model import VideoToVideo_sr\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\video_to_video_model.py\", line 14, in <module>\n    from video_to_video.diffusion.diffusion_sdedit import GaussianDiffusion\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\diffusion\\diffusion_sdedit.py\", line 10, in <module>\n    from .solvers_sdedit import sample_dpmpp_2m_sde, sample_heun\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\diffusion\\solvers_sdedit.py\", line 4, in <module>\n    import torchsde\nModuleNotFoundError: No module named 'torchsde'\n"
+  },
+  "52cacce1-36e6-49e2-a18c-40f5629aebc9": {
+    "status": "error",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\52cacce1-36e6-49e2-a18c-40f5629aebc9_023_klingai_reedit.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\52cacce1-36e6-49e2-a18c-40f5629aebc9_upscaled_023_klingai_reedit.mp4",
+    "created_at": "2025-05-10T13:38:47.332975",
+    "filename": "023_klingai_reedit.mp4",
+    "settings": {
+      "scale": 4,
+      "quality": "balanced",
+      "denoiseLevel": 0,
+      "preserveDetails": true
+    },
+    "error": "F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\timm\\models\\layers\\__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers\n  warnings.warn(f\"Importing from {__name__} is deprecated, please import via timm.layers\", FutureWarning)\nWARNING[XFORMERS]: xFormers can't load C++/CUDA extensions. xFormers was built for:\n    PyTorch 2.7.0+cu126 with CUDA 1206 (you have 2.2.2+cu121)\n    Python  3.12.10 (you have 3.12.6)\n  Please reinstall xformers (see https://github.com/facebookresearch/xformers#installing-xformers)\n  Memory-efficient attention, SwiGLU, sparse and more won't be available.\n  Set XFORMERS_MORE_DETAILS=1 for more details\nTraceback (most recent call last):\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_super_resolution\\scripts\\inference_sr.py\", line 18, in <module>\n    from video_to_video.video_to_video_model import VideoToVideo_sr\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\video_to_video_model.py\", line 14, in <module>\n    from video_to_video.diffusion.diffusion_sdedit import GaussianDiffusion\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\diffusion\\diffusion_sdedit.py\", line 10, in <module>\n    from .solvers_sdedit import sample_dpmpp_2m_sde, sample_heun\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\diffusion\\solvers_sdedit.py\", line 4, in <module>\n    import torchsde\nModuleNotFoundError: No module named 'torchsde'\n"
+  },
+  "1089c4ac-e70f-4fa9-8b58-3178d9681346": {
+    "status": "error",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\1089c4ac-e70f-4fa9-8b58-3178d9681346_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\1089c4ac-e70f-4fa9-8b58-3178d9681346_upscaled_test.mp4",
+    "created_at": "2025-05-10T13:52:49.513074",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "quality": "balanced",
+      "denoiseLevel": 0,
+      "preserveDetails": true
+    },
+    "error": "F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\timm\\models\\layers\\__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers\n  warnings.warn(f\"Importing from {__name__} is deprecated, please import via timm.layers\", FutureWarning)\nWARNING[XFORMERS]: xFormers can't load C++/CUDA extensions. xFormers was built for:\n    PyTorch 2.7.0+cu126 with CUDA 1206 (you have 2.2.2+cu121)\n    Python  3.12.10 (you have 3.12.6)\n  Please reinstall xformers (see https://github.com/facebookresearch/xformers#installing-xformers)\n  Memory-efficient attention, SwiGLU, sparse and more won't be available.\n  Set XFORMERS_MORE_DETAILS=1 for more details\nTraceback (most recent call last):\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_super_resolution\\scripts\\inference_sr.py\", line 18, in <module>\n    from video_to_video.video_to_video_model import VideoToVideo_sr\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\video_to_video_model.py\", line 14, in <module>\n    from video_to_video.diffusion.diffusion_sdedit import GaussianDiffusion\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\diffusion\\diffusion_sdedit.py\", line 10, in <module>\n    from .solvers_sdedit import sample_dpmpp_2m_sde, sample_heun\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\diffusion\\solvers_sdedit.py\", line 4, in <module>\n    import torchsde\nModuleNotFoundError: No module named 'torchsde'\n"
+  },
+  "a9ded95a-f9c0-4031-90f0-d5002bbb7368": {
+    "status": "error",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\a9ded95a-f9c0-4031-90f0-d5002bbb7368_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\a9ded95a-f9c0-4031-90f0-d5002bbb7368_upscaled_test.mp4",
+    "created_at": "2025-05-10T13:53:51.169351",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "quality": "balanced",
+      "denoiseLevel": 0,
+      "preserveDetails": true
+    },
+    "error": "F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\timm\\models\\layers\\__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers\n  warnings.warn(f\"Importing from {__name__} is deprecated, please import via timm.layers\", FutureWarning)\nWARNING[XFORMERS]: xFormers can't load C++/CUDA extensions. xFormers was built for:\n    PyTorch 2.7.0+cu126 with CUDA 1206 (you have 2.2.2+cu121)\n    Python  3.12.10 (you have 3.12.6)\n  Please reinstall xformers (see https://github.com/facebookresearch/xformers#installing-xformers)\n  Memory-efficient attention, SwiGLU, sparse and more won't be available.\n  Set XFORMERS_MORE_DETAILS=1 for more details\nTraceback (most recent call last):\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_super_resolution\\scripts\\inference_sr.py\", line 18, in <module>\n    from video_to_video.video_to_video_model import VideoToVideo_sr\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\video_to_video_model.py\", line 14, in <module>\n    from video_to_video.diffusion.diffusion_sdedit import GaussianDiffusion\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\diffusion\\diffusion_sdedit.py\", line 10, in <module>\n    from .solvers_sdedit import sample_dpmpp_2m_sde, sample_heun\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\diffusion\\solvers_sdedit.py\", line 4, in <module>\n    import torchsde\nModuleNotFoundError: No module named 'torchsde'\n"
+  },
+  "9f0db7b7-2e2d-4730-9379-03159efe9f26": {
+    "status": "error",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\9f0db7b7-2e2d-4730-9379-03159efe9f26_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\9f0db7b7-2e2d-4730-9379-03159efe9f26_upscaled_test.mp4",
+    "created_at": "2025-05-10T13:56:33.305740",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "quality": "balanced",
+      "denoiseLevel": 0,
+      "preserveDetails": true
+    },
+    "error": "F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\timm\\models\\layers\\__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers\n  warnings.warn(f\"Importing from {__name__} is deprecated, please import via timm.layers\", FutureWarning)\nWARNING[XFORMERS]: xFormers can't load C++/CUDA extensions. xFormers was built for:\n    PyTorch 2.7.0+cu126 with CUDA 1206 (you have 2.2.2+cu121)\n    Python  3.12.10 (you have 3.12.6)\n  Please reinstall xformers (see https://github.com/facebookresearch/xformers#installing-xformers)\n  Memory-efficient attention, SwiGLU, sparse and more won't be available.\n  Set XFORMERS_MORE_DETAILS=1 for more details\nTraceback (most recent call last):\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_super_resolution\\scripts\\inference_sr.py\", line 18, in <module>\n    from video_to_video.video_to_video_model import VideoToVideo_sr\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\video_to_video_model.py\", line 17, in <module>\n    from backend.debug_utils import ModelDebugger, debug_cuda_memory, debug_system_resources, debug_model_parameters, timing_decorator\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\backend\\debug_utils.py\", line 7, in <module>\n    from logger import app_logger, cuda_logger, model_logger\nModuleNotFoundError: No module named 'logger'\n"
+  },
+  "46d50766-cd3d-44b9-90a2-6b5777f51be1": {
+    "status": "processing",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\46d50766-cd3d-44b9-90a2-6b5777f51be1_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\46d50766-cd3d-44b9-90a2-6b5777f51be1_upscaled_test.mp4",
+    "created_at": "2025-05-10T13:59:29.817742",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "quality": "balanced",
+      "denoiseLevel": 0,
+      "preserveDetails": true
+    }
+  },
+  "8bfb80b6-9cb6-4ab9-9310-9e2de159bbe7": {
+    "status": "error",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\8bfb80b6-9cb6-4ab9-9310-9e2de159bbe7_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\8bfb80b6-9cb6-4ab9-9310-9e2de159bbe7_upscaled_test.mp4",
+    "created_at": "2025-05-10T14:03:59.876792",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "quality": "balanced",
+      "denoiseLevel": 0,
+      "preserveDetails": true
+    },
+    "error": "F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\timm\\models\\layers\\__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers\n  warnings.warn(f\"Importing from {__name__} is deprecated, please import via timm.layers\", FutureWarning)\nWARNING[XFORMERS]: xFormers can't load C++/CUDA extensions. xFormers was built for:\n    PyTorch 2.7.0+cu126 with CUDA 1206 (you have 2.2.2+cu121)\n    Python  3.12.10 (you have 3.12.6)\n  Please reinstall xformers (see https://github.com/facebookresearch/xformers#installing-xformers)\n  Memory-efficient attention, SwiGLU, sparse and more won't be available.\n  Set XFORMERS_MORE_DETAILS=1 for more details\nTraceback (most recent call last):\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_super_resolution\\scripts\\inference_sr.py\", line 18, in <module>\n    from video_to_video.video_to_video_model import VideoToVideo_sr\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\video_to_video_model.py\", line 12, in <module>\n    from video_to_video.modules.autoencoder import AutoencoderKLTemporalDecoder\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\modules\\__init__.py\", line 2, in <module>\n    from .unet_v2v import *\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_to_video\\modules\\unet_v2v.py\", line 19, in <module>\n    import xformers.ops\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\xformers\\ops\\__init__.py\", line 9, in <module>\n    from .fmha import (\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\xformers\\ops\\fmha\\__init__.py\", line 10, in <module>\n    from . import (\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\xformers\\ops\\fmha\\flash.py\", line 49, in <module>\n    torch.version.hip is None and torch.backends.cuda.is_flash_attention_available()\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: module 'torch.backends.cuda' has no attribute 'is_flash_attention_available'\n"
+  },
+  "cf764c1e-2f50-4d8b-9d78-998b0a9eba24": {
+    "status": "error",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\cf764c1e-2f50-4d8b-9d78-998b0a9eba24_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\cf764c1e-2f50-4d8b-9d78-998b0a9eba24_upscaled_test.mp4",
+    "created_at": "2025-05-10T14:12:55.575921",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "quality": "balanced",
+      "denoiseLevel": 0,
+      "preserveDetails": true
+    },
+    "error": "F:\\Coding Projects\\STAR_Cursor_Test\\.venv\\Lib\\site-packages\\timm\\models\\layers\\__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers\n  warnings.warn(f\"Importing from {__name__} is deprecated, please import via timm.layers\", FutureWarning)\n2025-05-10 14:13:03,014 - video_to_video - INFO - Setting PyTorch num_threads to 16\n2025-05-10 14:13:03,049 - video_to_video - INFO - inference_sr.py main() function started.\n2025-05-10 14:13:03,052 - video_to_video - INFO - Parsed arguments: Namespace(input_path='F:\\\\Coding Projects\\\\STAR_Cursor_Test\\\\backend\\\\uploads\\\\cf764c1e-2f50-4d8b-9d78-998b0a9eba24_test.mp4', output_path='F:\\\\Coding Projects\\\\STAR_Cursor_Test\\\\backend\\\\processed\\\\cf764c1e-2f50-4d8b-9d78-998b0a9eba24_upscaled_test.mp4', model_path='F:\\\\Coding Projects\\\\STAR_Cursor_Test\\\\video_super_resolution\\\\models\\\\star.pth', upscale=4, max_chunk_len=32, solver_mode='fast', steps=15, denoise_level=0.0, preserve_details=True, frame_stride=8, resize_short_edge=360, device='cuda', amp=True, num_workers=8, pin_memory=True, batch_size=2)\n2025-05-10 14:13:03,055 - video_to_video - INFO - Seed set to 42.\n2025-05-10 14:13:03,055 - video_to_video - INFO - Initializing STAR model...\nTraceback (most recent call last):\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_super_resolution\\scripts\\inference_sr.py\", line 546, in <module>\n    main()\n  File \"F:\\Coding Projects\\STAR_Cursor_Test\\video_super_resolution\\scripts\\inference_sr.py\", line 431, in main\n    guide_scale=args.guide_scale,\n                ^^^^^^^^^^^^^^^^\nAttributeError: 'Namespace' object has no attribute 'guide_scale'\n"
+  },
+  "7204870b-1e0f-42bc-9bf5-75c5e63bee4d": {
+    "status": "processing",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\7204870b-1e0f-42bc-9bf5-75c5e63bee4d_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\7204870b-1e0f-42bc-9bf5-75c5e63bee4d_upscaled_test.mp4",
+    "created_at": "2025-05-10T14:17:49.278652",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "denoiseLevel": 0,
+      "preserveDetails": true,
+      "quality": "balanced",
+      "guideScale": 7.5
+    }
+  },
+  "91d3f5d1-be3d-4805-a0ef-6a7cc64b55f0": {
+    "status": "processing",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\91d3f5d1-be3d-4805-a0ef-6a7cc64b55f0_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\91d3f5d1-be3d-4805-a0ef-6a7cc64b55f0_upscaled_test.mp4",
+    "created_at": "2025-05-10T14:20:07.675046",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "denoiseLevel": 0,
+      "preserveDetails": true,
+      "quality": "balanced",
+      "guideScale": 7.5
+    }
+  },
+  "08244dc0-fa6d-43a4-b926-f89326eecd37": {
+    "status": "processing",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\08244dc0-fa6d-43a4-b926-f89326eecd37_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\08244dc0-fa6d-43a4-b926-f89326eecd37_upscaled_test.mp4",
+    "created_at": "2025-05-10T14:21:31.924222",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "denoiseLevel": 0,
+      "preserveDetails": true,
+      "quality": "balanced",
+      "guideScale": 7.5
+    }
+  },
+  "d1f58803-8f56-4f8d-b592-138cafc654b8": {
+    "status": "processing",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\d1f58803-8f56-4f8d-b592-138cafc654b8_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\d1f58803-8f56-4f8d-b592-138cafc654b8_upscaled_test.mp4",
+    "created_at": "2025-05-10T15:09:04.467821",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "denoiseLevel": 0,
+      "preserveDetails": true,
+      "quality": "balanced",
+      "guideScale": 7.5
+    }
+  },
+  "cf043e75-1899-44ef-8afb-dad179c5f9e8": {
+    "status": "processing",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\cf043e75-1899-44ef-8afb-dad179c5f9e8_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\cf043e75-1899-44ef-8afb-dad179c5f9e8_upscaled_test.mp4",
+    "created_at": "2025-05-10T15:13:40.797453",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "denoiseLevel": 0,
+      "preserveDetails": true,
+      "quality": "balanced",
+      "guideScale": 7.5
+    }
+  },
+  "064bd204-4c2f-4d43-8534-1bf17446199b": {
+    "status": "processing",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\064bd204-4c2f-4d43-8534-1bf17446199b_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\064bd204-4c2f-4d43-8534-1bf17446199b_upscaled_test.mp4",
+    "created_at": "2025-05-10T15:14:29.794777",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "denoiseLevel": 0,
+      "preserveDetails": true,
+      "quality": "balanced",
+      "guideScale": 7.5
+    }
+  },
+  "10cc1534-35d2-48e3-8bf5-270861dde200": {
+    "status": "processing",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\10cc1534-35d2-48e3-8bf5-270861dde200_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\10cc1534-35d2-48e3-8bf5-270861dde200_upscaled_test.mp4",
+    "created_at": "2025-05-10T15:15:26.742640",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "denoiseLevel": 0,
+      "preserveDetails": true,
+      "quality": "balanced",
+      "guideScale": 7.5
+    }
+  },
+  "4e4b6e27-6fb5-4259-9398-df03251967d8": {
+    "status": "processing",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\4e4b6e27-6fb5-4259-9398-df03251967d8_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\4e4b6e27-6fb5-4259-9398-df03251967d8_upscaled_test.mp4",
+    "created_at": "2025-05-10T15:16:40.264651",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "denoiseLevel": 0,
+      "preserveDetails": true,
+      "quality": "balanced",
+      "guideScale": 7.5
+    },
+    "video_info": {
+      "fps": 15.0,
+      "total_frames": 78
+    }
+  },
+  "97139c44-f6e6-4604-9e69-5d5dc241ebcd": {
+    "status": "processing",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\97139c44-f6e6-4604-9e69-5d5dc241ebcd_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\97139c44-f6e6-4604-9e69-5d5dc241ebcd_upscaled_test.mp4",
+    "created_at": "2025-05-10T15:17:44.704939",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "denoiseLevel": 0,
+      "preserveDetails": true,
+      "quality": "balanced",
+      "guideScale": 7.5
+    }
+  },
+  "023721f0-b376-4477-a95a-9ae90018759c": {
+    "status": "processing",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\023721f0-b376-4477-a95a-9ae90018759c_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\023721f0-b376-4477-a95a-9ae90018759c_upscaled_test.mp4",
+    "created_at": "2025-05-10T15:18:46.179101",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "denoiseLevel": 0,
+      "preserveDetails": true,
+      "quality": "balanced",
+      "guideScale": 7.5
+    }
+  },
+  "a2793a2e-b709-4a2d-be8e-16be7de59ffe": {
+    "status": "pending",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\a2793a2e-b709-4a2d-be8e-16be7de59ffe_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\a2793a2e-b709-4a2d-be8e-16be7de59ffe_upscaled_test.mp4",
+    "created_at": "2025-05-10T15:20:04.248589",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "denoiseLevel": 0,
+      "preserveDetails": true,
+      "quality": "balanced",
+      "guideScale": 7.5
+    }
+  },
+  "534ce7ab-477d-45b1-b33c-9826bf66f677": {
+    "status": "processing",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\534ce7ab-477d-45b1-b33c-9826bf66f677_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\534ce7ab-477d-45b1-b33c-9826bf66f677_upscaled_test.mp4",
+    "created_at": "2025-05-10T15:21:56.539988",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "denoiseLevel": 0,
+      "preserveDetails": true,
+      "quality": "balanced",
+      "guideScale": 7.5
+    },
+    "video_info": {
+      "fps": 15.0,
+      "total_frames": 78
+    },
+    "total_frames": 78
+  },
+  "3a4451b1-48b8-440a-899d-6ee161c86b6d": {
+    "status": "processing",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\3a4451b1-48b8-440a-899d-6ee161c86b6d_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\3a4451b1-48b8-440a-899d-6ee161c86b6d_upscaled_test.mp4",
+    "created_at": "2025-05-10T15:23:40.775762",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "denoiseLevel": 0,
+      "preserveDetails": true,
+      "quality": "balanced",
+      "guideScale": 7.5
+    },
+    "video_info": {
+      "fps": 15.0,
+      "total_frames": 78
+    },
+    "total_frames": 78
+  },
+  "5055cc1a-c9c5-42df-9970-ad8e958136a8": {
+    "status": "processing",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\5055cc1a-c9c5-42df-9970-ad8e958136a8_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\5055cc1a-c9c5-42df-9970-ad8e958136a8_upscaled_test.mp4",
+    "created_at": "2025-05-10T15:25:12.596799",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "denoiseLevel": 0,
+      "preserveDetails": true,
+      "quality": "balanced",
+      "guideScale": 7.5
+    },
+    "video_info": {
+      "fps": 15.0,
+      "total_frames": 78
+    },
+    "total_frames": 78
+  },
+  "be0d3ca9-7bfb-46dd-88b4-bb09db072182": {
+    "status": "processing",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\be0d3ca9-7bfb-46dd-88b4-bb09db072182_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\be0d3ca9-7bfb-46dd-88b4-bb09db072182_upscaled_test.mp4",
+    "created_at": "2025-05-10T15:27:36.228436",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "denoiseLevel": 0,
+      "preserveDetails": true,
+      "quality": "balanced",
+      "guideScale": 7.5
+    },
+    "video_info": {
+      "fps": 15.0,
+      "total_frames": 78
+    },
+    "total_frames": 78
+  },
+  "4c48978e-a686-4568-b930-f1ad96031373": {
+    "status": "processing",
+    "progress": 0,
+    "input_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\uploads\\4c48978e-a686-4568-b930-f1ad96031373_test.mp4",
+    "output_path": "F:\\Coding Projects\\STAR_Cursor_Test\\backend\\processed\\4c48978e-a686-4568-b930-f1ad96031373_upscaled_test.mp4",
+    "created_at": "2025-05-10T15:28:07.918869",
+    "filename": "test.mp4",
+    "settings": {
+      "scale": 4,
+      "denoiseLevel": 0,
+      "preserveDetails": true,
+      "quality": "balanced",
+      "guideScale": 7.5
+    },
+    "video_info": {
+      "fps": 15.0,
+      "total_frames": 78
+    },
+    "total_frames": 78
   }
 }

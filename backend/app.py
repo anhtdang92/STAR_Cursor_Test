@@ -23,13 +23,27 @@ from pathlib import Path
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Configure logging to file
-log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend.log')
+# Configure logging to file with more detailed format
+log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
+os.makedirs(log_dir, exist_ok=True)
+log_file = os.path.join(log_dir, f'backend_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
 file_handler = logging.FileHandler(log_file)
-formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 logger.setLevel(logging.INFO)
+
+# Add console handler for immediate feedback
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
+
+logger.info(f"Logging initialized. Log file: {log_file}")
+logger.info(f"Python version: {sys.version}")
+logger.info(f"CUDA available: {torch.cuda.is_available()}")
+if torch.cuda.is_available():
+    logger.info(f"CUDA device: {torch.cuda.get_device_name(0)}")
+logger.info(f"Current working directory: {os.getcwd()}")
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -55,9 +69,11 @@ def load_tasks():
                 for task_id, task in tasks_data.items():
                     if 'created_at' in task:
                         task['created_at'] = datetime.fromisoformat(task['created_at'])
+                logger.info(f"Loaded {len(tasks_data)} tasks from {TASKS_FILE}")
                 return tasks_data
     except Exception as e:
         logger.error(f"Error loading tasks: {str(e)}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
     return {}
 
 def save_tasks():
@@ -72,17 +88,18 @@ def save_tasks():
         
         with open(TASKS_FILE, 'w') as f:
             json.dump(tasks_data, f, indent=2)
+        logger.info(f"Saved {len(tasks_data)} tasks to {TASKS_FILE}")
     except Exception as e:
         logger.error(f"Error saving tasks: {str(e)}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
 
 # Load tasks on startup
 tasks = load_tasks()
+logger.info(f"Initialized with {len(tasks)} tasks")
 
 # Configuration
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 PROCESSED_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'processed')
-MODEL_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
-                         'video_super_resolution', 'models', 'star.pth')
 
 # Create directories if they don't exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -94,7 +111,7 @@ app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB max file size
 
 print(f"Upload directory: {UPLOAD_FOLDER}")
 print(f"Processed directory: {PROCESSED_FOLDER}")
-print(f"Model path: {MODEL_PATH}")
+print(f"Model path: {app.config['MODEL_PATH']}")
 
 def download_ffmpeg():
     """Download and setup FFmpeg for Windows"""
@@ -250,6 +267,7 @@ def get_star_args(settings, input_path, output_path):
         denoise_level = float(settings.get('denoiseLevel', 0))
         preserve_details = settings.get('preserveDetails', True)
         quality = settings.get('quality', 'balanced').lower()
+        guide_scale = float(settings.get('guideScale', 7.5))
 
         # Map quality presets to model settings
         quality_settings = {
@@ -273,10 +291,20 @@ def get_star_args(settings, input_path, output_path):
         # Get settings for the selected quality preset
         preset = quality_settings.get(quality, quality_settings['balanced'])
 
-        return [
+        # Set solver mode and steps based on quality
+        solver_mode = 'balanced'
+        steps = 20
+        if quality == 'fast':
+            solver_mode = 'fast'
+            steps = 15
+        elif quality == 'quality':
+            solver_mode = 'quality'
+            steps = 25
+
+        args = [
             '--input_path', input_path,
             '--output_path', output_path,
-            '--model_path', MODEL_PATH,
+            '--model_path', app.config['MODEL_PATH'],
             '--upscale', str(scale_factor),
             '--denoise_level', str(denoise_level),
             '--device', 'cuda',
@@ -285,109 +313,150 @@ def get_star_args(settings, input_path, output_path):
             '--pin_memory',
             '--batch_size', preset['batch_size'],
             '--frame_stride', preset['frame_stride'],
-            '--resize_short_edge', preset['resize_short_edge']
-        ] + (['--preserve_details'] if preserve_details else [])
+            '--resize_short_edge', preset['resize_short_edge'],
+            '--guide_scale', str(guide_scale),
+            '--solver_mode', solver_mode,
+            '--steps', str(steps)
+        ]
+
+        if preserve_details:
+            args.append('--preserve_details')
+
+        logger.info(f"Constructed STAR arguments: {args}")
+        return args
     except Exception as e:
         logger.error(f"Error preparing STAR arguments: {str(e)}")
         logger.error(f"Full traceback: {traceback.format_exc()}")
         raise
 
 def process_video(task_id, input_path, output_path, settings):
-    logger.info(f'--- Entered process_video for task {task_id} ---')
+    """Process video with STAR model."""
+    logger.info(f"--- Entered process_video for task {task_id} ---")
+    logger.info(f"Input path: {input_path}, Output path: {output_path}, Settings: {settings}")
+    
     try:
-        logger.info(f'--- Processing started for task {task_id} ---')
-        logger.info(f'Input path: {input_path}, Output path: {output_path}, Settings: {settings}')
-        # Ensure upload and processed directories exist
-        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-        os.makedirs(app.config['PROCESSED_FOLDER'], exist_ok=True)
-        
+        # Update task status to processing
         tasks[task_id]['status'] = 'processing'
-        tasks[task_id]['progress'] = 0
-        save_tasks()  # Save after updating status
+        save_tasks()
         
-        # Get video duration for progress calculation
-        duration = get_video_duration(input_path)
-        if duration is None:
-            raise Exception("Could not determine video duration")
-        
-        # Get STAR model arguments from settings
-        star_args = get_star_args(settings, input_path, output_path)
-        
-        # Construct the full command
-        script_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                                 'video_super_resolution', 'scripts', 'inference_sr.py')
-        
-        cmd = [sys.executable, script_path] + star_args
-        
-        logger.info(f"Running command: {' '.join(cmd)}")
-        logger.info(f"Current working directory: {os.getcwd()}")
+        # Verify paths and dependencies
+        logger.info("Verifying paths and dependencies...")
         logger.info(f"Input path exists: {os.path.exists(input_path)}")
         logger.info(f"Output directory exists: {os.path.exists(os.path.dirname(output_path))}")
         logger.info(f"Model path exists: {os.path.exists(app.config['MODEL_PATH'])}")
+        logger.info(f"FFmpeg is installed and accessible: {check_ffmpeg()}")
         
+        # Get video info for progress tracking
+        video_info = get_video_info(input_path)
+        tasks[task_id]['video_info'] = video_info
+        tasks[task_id]['total_frames'] = video_info['total_frames']
+        save_tasks()
+        
+        # Construct STAR arguments
+        star_args = get_star_args(settings, input_path, output_path)
+        logger.info(f"Constructed STAR arguments: {star_args}")
+        
+        # Run STAR model
+        script_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'video_super_resolution', 'scripts', 'inference_sr.py')
+        cmd = [sys.executable, script_path] + star_args
+        logger.info(f"Running command: {' '.join(cmd)}")
+        logger.info(f"Current working directory: {os.getcwd()}")
+        
+        # Create a log file for STAR model output
+        star_log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs', f'star_{task_id}.log')
+        with open(star_log_file, 'w') as f:
+            f.write(f"Starting STAR model processing for task {task_id}\n")
+            f.write(f"Command: {' '.join(cmd)}\n")
+            f.write(f"Working directory: {os.getcwd()}\n")
+            f.write("-" * 80 + "\n")
+        
+        # Start the process with output redirection
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            bufsize=1,  # Line buffered
+            universal_newlines=True,
+            env=dict(os.environ, PYTHONUNBUFFERED="1")  # Force Python to be unbuffered
         )
         
-        # Get scale factor for progress calculation
-        scale_factor = int(settings.get('scale', 4))
-        if scale_factor not in [2, 4, 8]:
-            scale_factor = 4
-        
-        # Monitor process and update progress
+        # Monitor process output
         while True:
-            if process.poll() is not None:
-                break
+            # Read stdout
+            output = process.stdout.readline()
+            if output:
+                logger.info(f"STAR output: {output.strip()}")
+                # Log to STAR model log file
+                with open(star_log_file, 'a') as f:
+                    f.write(f"{output}")
                 
-            # Update progress based on output file size
-            if os.path.exists(output_path):
-                current_size = os.path.getsize(output_path)
-                expected_size = os.path.getsize(input_path) * scale_factor * scale_factor
-                progress = min(95, (current_size / expected_size) * 100)
-                tasks[task_id]['progress'] = progress
-                save_tasks()  # Save after updating progress
-                
-            time.sleep(1)
-        
-        stdout, stderr = process.communicate()
-        
-        # Log the complete output
-        logger.info(f"Process stdout: {stdout}")
-        if stderr:
-            logger.error(f"Process stderr: {stderr}")
-        
-        if process.returncode == 0:
-            if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
-                tasks[task_id]['status'] = 'complete'
-                tasks[task_id]['progress'] = 100
-                tasks[task_id]['download_url'] = f'/api/download/{task_id}'
-                save_tasks()  # Save after completing task
-                logger.info(f"Video processing completed successfully for task {task_id}")
-            else:
-                error_msg = "Output file not found or empty after processing"
-                logger.error(error_msg)
-                logger.error(f"Output path: {output_path}")
-                logger.error(f"Output exists: {os.path.exists(output_path)}")
-                if os.path.exists(output_path):
-                    logger.error(f"Output size: {os.path.getsize(output_path)}")
-                raise Exception(error_msg)
-        else:
-            error_msg = stderr if stderr else 'Unknown error during processing'
-            logger.error(f"Processing failed for task {task_id}")
-            logger.error(f"Return code: {process.returncode}")
-            logger.error(f"Error message: {error_msg}")
-            raise Exception(error_msg)
+                # Check for frame progress in output
+                if "Processing frame" in output:
+                    try:
+                        # Extract frame numbers from output
+                        current_frame = int(output.split("frame")[1].split("/")[0].strip())
+                        total_frames = int(output.split("/")[1].split()[0].strip())
+                        progress = (current_frame / total_frames) * 100
+                        
+                        # Update task progress
+                        tasks[task_id]['current_frame'] = current_frame
+                        tasks[task_id]['total_frames'] = total_frames
+                        tasks[task_id]['progress'] = round(progress, 2)
+                        save_tasks()
+                    except Exception as e:
+                        logger.error(f"Error parsing frame progress: {str(e)}")
             
+            # Read stderr
+            error = process.stderr.readline()
+            if error:
+                logger.error(f"STAR stderr: {error.strip()}")
+                # Log stderr to STAR model log file
+                with open(star_log_file, 'a') as f:
+                    f.write(f"ERROR: {error}")
+            
+            # Check if process has finished
+            if process.poll() is not None:
+                # Read any remaining output
+                remaining_output = process.stdout.read()
+                if remaining_output:
+                    logger.info(f"Remaining STAR output: {remaining_output.strip()}")
+                    with open(star_log_file, 'a') as f:
+                        f.write(remaining_output)
+                
+                remaining_error = process.stderr.read()
+                if remaining_error:
+                    logger.error(f"Remaining STAR stderr: {remaining_error.strip()}")
+                    with open(star_log_file, 'a') as f:
+                        f.write(f"ERROR: {remaining_error}")
+                
+                break
+            
+            # Small sleep to prevent CPU spinning
+            time.sleep(0.1)
+        
+        # Check return code
+        return_code = process.poll()
+        if return_code != 0:
+            logger.error(f"STAR process failed with return code: {return_code}")
+            with open(star_log_file, 'a') as f:
+                f.write(f"\nProcess failed with return code: {return_code}\n")
+            raise Exception(f"STAR process failed with return code: {return_code}")
+            
+        # Update task status to complete
+        tasks[task_id]['status'] = 'complete'
+        tasks[task_id]['progress'] = 100
+        tasks[task_id]['download_url'] = f'/api/download/{task_id}'
+        save_tasks()
+        
+        logger.info(f"Video processing completed successfully for task {task_id}")
+        
     except Exception as e:
-        logger.error(f'Exception at very start of process_video for task {task_id}: {str(e)}')
-        logger.error(f'Full traceback: {traceback.format_exc()}')
+        logger.error(f"Error in process_video: {str(e)}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
         tasks[task_id]['status'] = 'error'
         tasks[task_id]['error'] = str(e)
-        save_tasks()  # Save after error
+        save_tasks()
     finally:
         try:
             if os.path.exists(input_path):
@@ -556,33 +625,22 @@ def test_page():
 
 @app.route('/api/progress/<task_id>', methods=['GET'])
 def get_progress(task_id):
-    """Get the current progress of video processing."""
+    """Get current processing status."""
     try:
-        if task_id not in tasks:
-            return jsonify({'error': 'Task not found'}), 404
-            
-        task = tasks[task_id]
-        
-        # Get video info if not already stored
-        if 'video_info' not in task:
-            task['video_info'] = get_video_info(task['input_path'])
-        
-        return jsonify({
-            'current_frame': task.get('current_frame', 0),
-            'total_frames': task['video_info']['total_frames'],
-            'fps': task['video_info']['fps'],
-            'percentage': task['progress'],
-            'status': task['status'],
-            'estimated_time_remaining': calculate_remaining_time(
-                task.get('current_frame', 0),
-                task['video_info']['total_frames'],
-                task['video_info']['fps']
-            )
-        }), 200
-        
+        logger.info(f"Getting progress for task {task_id}")
+        if task_id in tasks:
+            task = tasks[task_id]
+            logger.info(f"Task status: {task.get('status', 'unknown')}")
+            logger.info(f"Current frame: {task.get('current_frame', 0)}/{task.get('total_frames', 0)}")
+            logger.info(f"Progress: {task.get('progress', 0)}%")
+            return task
+        else:
+            logger.warning(f"Task {task_id} not found")
+            return {'status': 'not_found', 'progress': 0}
     except Exception as e:
         logger.error(f"Error getting progress: {str(e)}")
-        return jsonify({'error': f'Error getting progress: {str(e)}'}), 500
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        return {'status': 'error', 'progress': 0}
 
 def calculate_remaining_time(current_frame, total_frames, fps):
     """Calculate estimated time remaining in seconds"""

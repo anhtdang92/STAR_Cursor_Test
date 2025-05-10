@@ -4,7 +4,7 @@ import time
 from functools import wraps
 import psutil
 import GPUtil
-from logger import app_logger, cuda_logger, model_logger
+from .logger import app_logger, cuda_logger, model_logger
 
 def debug_cuda_memory():
     """Print detailed CUDA memory information"""

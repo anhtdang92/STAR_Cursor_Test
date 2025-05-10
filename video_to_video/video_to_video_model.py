@@ -14,7 +14,7 @@ from video_to_video.utils.config import cfg
 from video_to_video.diffusion.diffusion_sdedit import GaussianDiffusion
 from video_to_video.diffusion.schedules_sdedit import noise_schedule
 from video_to_video.utils.logger import get_logger
-from debug_utils import ModelDebugger, debug_cuda_memory, debug_system_resources, debug_model_parameters, timing_decorator
+from backend.debug_utils import ModelDebugger, debug_cuda_memory, debug_system_resources, debug_model_parameters, timing_decorator
 
 logger = get_logger()
 

@@ -10,6 +10,7 @@ output_video=""
 model_path=""
 scale_factor=4
 quality="balanced"
+guide_scale=7.5
 denoise_level=0
 preserve_details=true
 frame_length=16
@@ -60,6 +61,10 @@ while [[ $# -gt 0 ]]; do
             quality="$2"
             shift 2
             ;;
+        --guide_scale)
+            guide_scale="$2"
+            shift 2
+            ;;
         --denoise_level)
             denoise_level="$2"
             shift 2
@@ -103,6 +108,7 @@ echo "Output path: $output_video"
 echo "Model path: $model_path"
 echo "Scale factor: $scale_factor"
 echo "Quality: $quality"
+echo "Guide scale: $guide_scale"
 echo "Frame length: $frame_length"
 echo "Frame stride: $frame_stride"
 echo "Resize short edge: $resize_short_edge"
@@ -137,6 +143,7 @@ fi
     --num_workers 8 \
     --pin_memory \
     --batch_size 1 \
+    --guide_scale "$guide_scale" \
     $([ "$preserve_details" = true ] && echo "--preserve_details")
 
 if [ $? -eq 0 ]; then
