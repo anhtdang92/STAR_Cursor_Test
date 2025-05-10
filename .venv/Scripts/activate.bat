@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set VIRTUAL_ENV=f:\Coding Projects\STAR_Cursor_Test\.venv
+set VIRTUAL_ENV=F:\Coding Projects\STAR_Cursor_Test\.venv
 
 if not defined PROMPT set PROMPT=$P$G
 
