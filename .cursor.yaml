@@ -1,0 +1,224 @@
+name: STAR Video Super Resolution
+description: Video super resolution application with Flask backend and React frontend
+
+setup:
+  # Backend setup
+  - name: Install Python dependencies
+    command: |
+      .venv\Scripts\pip install -r requirements.txt
+      .venv\Scripts\pip install torch==2.0.1 torchvision==0.15.2 --index-url https://download.pytorch.org/whl/cu118
+      .venv\Scripts\pip install torchsde xformers
+
+  # Frontend setup
+  - name: Install Node dependencies
+    command: |
+      cd frontend
+      npm install
+
+run:
+  # Start backend server
+  - name: Start Flask Backend
+    command: |
+      cd backend
+      ..\.venv\Scripts\python app.py
+    background: true
+
+  # Start frontend development server
+  - name: Start React Frontend
+    command: |
+      cd frontend
+      npm start
+    background: true
+
+ports:
+  - 5000  # Backend API
+  - 3000  # Frontend development server
+
+notes: |
+  - Backend will be available at http://localhost:5000
+  - Frontend will be available at http://localhost:3000
+  - Make sure to have Python 3.x and Node.js installed
+  - The application requires CUDA-compatible GPU for video processing
+  - Project rules and guidelines are in .cursor/rules.yaml
+  - **Important:** In Windows PowerShell, do NOT use '&&' to chain commands. Use ';' or run each command separately to avoid syntax errors.
+  
+  ## How to Test the App
+  1. Activate the virtual environment:
+     
+     ```
+     .venv\Scripts\activate
+     ```
+  2. Start the backend server:
+     
+     ```
+     cd backend
+     python app.py
+     ```
+  3. (Optional) In a new terminal, create a test video if not present:
+     
+     ```
+     python create_test_video.py
+     ```
+  4. Test the upload endpoint:
+     
+     ```
+     python backend/test_upload.py
+     ```
+  5. Check the status endpoint:
+     - Note the `task_id` from the upload response.
+     - Use curl or Postman to check status:
+     
+     ```
+     curl http://localhost:5000/api/status/<task_id>
+     ```
+     Replace `<task_id>` with the actual id from the upload response.
+
+# Instructions for development and testing
+
+steps:
+  - name: Activate virtual environment
+    shell: |
+      .venv\Scripts\activate
+  - name: Start backend server
+    shell: |
+      cd backend
+      python app.py
+  - name: Create test video (if not present)
+    shell: |
+      python create_test_video.py
+  - name: Test upload endpoint
+    shell: |
+      python backend/test_upload.py
+  - name: Check status endpoint
+    instructions: |
+      After running the upload test, note the task id from the response (if available), then use a tool like curl or Postman to check the status:
+        curl http://localhost:5000/api/status/<task_id>
+      Replace <task_id> with the actual id returned from the upload response.
+
+project:
+  name: video-super-resolution
+  description: A robust backend service for video super-resolution processing using the STAR model
+  version: 1.0.0
+
+settings:
+  python:
+    version: "3.8+"
+    venv: "venv"
+    requirements: "requirements.txt"
+  
+  paths:
+    uploads: "backend/uploads"
+    processed: "backend/processed"
+    logs: "backend/logs"
+    models: "video_super_resolution/models"
+    scripts: "video_super_resolution/scripts"
+
+  git:
+    ignore:
+      - "**/__pycache__"
+      - "*.pyc"
+      - "*.pyo"
+      - "*.pyd"
+      - "*.so"
+      - "*.dll"
+      - "*.dylib"
+      - "venv/"
+      - "ENV/"
+      - "env/"
+      - ".env"
+      - ".idea/"
+      - ".vscode/"
+      - "*.swp"
+      - "*.swo"
+      - "backend/uploads/"
+      - "backend/processed/"
+      - "backend/logs/"
+      - "*.log"
+      - "*.mp4"
+      - "*.pt"
+      - "*.pth"
+      - "*.ckpt"
+      - "*.bin"
+      - "*.onnx"
+      - "*.engine"
+      - ".DS_Store"
+      - "Thumbs.db"
+      - "node_modules/"
+      - "npm-debug.log*"
+      - "yarn-debug.log*"
+      - "yarn-error.log*"
+      - ".env.local"
+      - ".env.development.local"
+      - ".env.test.local"
+      - ".env.production.local"
+      - "video_super_resolution/models/"
+      - "frontend/public/"
+      - "*.exe"
+      - "*.msi"
+      - "*.dll"
+      - ".cursor.yaml"
+      - "/build"
+      - "/dist"
+      - "uploads/"
+      - "processed/"
+      - "input/video/*"
+      - "output/video/*"
+      - "!input/video/.gitkeep"
+      - "!output/video/.gitkeep"
+      - "pretrained_weight/*"
+      - "!pretrained_weight/.gitkeep"
+
+  editor:
+    tab_size: 2
+    insert_spaces: true
+    trim_trailing_whitespace: true
+    insert_final_newline: true
+    charset: "utf-8"
+
+  linting:
+    python:
+      enabled: true
+      flake8:
+        enabled: true
+        max_line_length: 100
+      mypy:
+        enabled: true
+        strict: true
+      pylint:
+        enabled: true
+        max_line_length: 100
+
+  formatting:
+    python:
+      enabled: true
+      black:
+        enabled: true
+        line_length: 100
+      isort:
+        enabled: true
+        profile: "black"
+        line_length: 100
+
+  testing:
+    python:
+      enabled: true
+      pytest:
+        enabled: true
+        test_path: "tests"
+        coverage: true
+
+  dependencies:
+    python:
+      - "torch>=1.8.0"
+      - "torchvision>=0.9.0"
+      - "flask>=2.0.0"
+      - "numpy>=1.19.0"
+      - "opencv-python>=4.5.0"
+      - "pillow>=8.0.0"
+      - "requests>=2.25.0"
+      - "psutil>=5.8.0"
+      - "gputil>=1.4.0"
+      - "einops>=0.3.0"
+      - "typing-extensions>=3.7.0"
+      - "werkzeug>=2.0.0"
+      - "flask-cors>=3.0.0" 

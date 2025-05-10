@@ -1,0 +1,166 @@
+editor:
+  tab_size: 2
+  insert_spaces: true
+  trim_trailing_whitespace: true
+  insert_final_newline: true
+  charset: "utf-8"
+  word_wrap: false
+  rulers: [100]
+  format_on_save: true
+  format_on_paste: true
+  trim_automatic_whitespace: true
+  ensure_newline_at_eof_on_save: true
+  translate_tabs_to_spaces: true
+  detect_indentation: true
+  auto_indent: true
+  smart_indent: true
+  smart_backspace: true
+  smart_delete: true
+  smart_tab: true
+  smart_paste: true
+  smart_home_end: true
+  smart_page_up_down: true
+  smart_word_jump: true
+  smart_line_jump: true
+  smart_line_move: true
+  smart_line_copy: true
+  smart_line_delete: true
+  smart_line_join: true
+  smart_line_split: true
+  smart_line_indent: true
+  smart_line_unindent: true
+  smart_line_comment: true
+  smart_line_uncomment: true
+  smart_line_duplicate: true
+  smart_line_move_up: true
+  smart_line_move_down: true
+  smart_line_move_left: true
+  smart_line_move_right: true
+  smart_line_move_to_start: true
+  smart_line_move_to_end: true
+  smart_line_move_to_indentation: true
+  smart_line_move_to_previous_indentation: true
+  smart_line_move_to_next_indentation: true
+  smart_line_move_to_previous_blank_line: true
+  smart_line_move_to_next_blank_line: true
+  smart_line_move_to_previous_non_blank_line: true
+  smart_line_move_to_next_non_blank_line: true
+  smart_line_move_to_previous_word: true
+  smart_line_move_to_next_word: true
+  smart_line_move_to_previous_word_end: true
+  smart_line_move_to_next_word_end: true
+  smart_line_move_to_previous_word_start: true
+  smart_line_move_to_next_word_start: true
+  smart_line_move_to_previous_word_boundary: true
+  smart_line_move_to_next_word_boundary: true
+  smart_line_move_to_previous_word_boundary_end: true
+  smart_line_move_to_next_word_boundary_end: true
+  smart_line_move_to_previous_word_boundary_start: true
+  smart_line_move_to_next_word_boundary_start: true
+
+python:
+  interpreter: "venv/bin/python"
+  linting:
+    enabled: true
+    flake8:
+      enabled: true
+      max_line_length: 100
+      ignore: ["E203", "W503"]
+    mypy:
+      enabled: true
+      strict: true
+      ignore_missing_imports: true
+    pylint:
+      enabled: true
+      max_line_length: 100
+      disable: ["C0111", "C0103"]
+  formatting:
+    enabled: true
+    black:
+      enabled: true
+      line_length: 100
+      skip_string_normalization: true
+    isort:
+      enabled: true
+      profile: "black"
+      line_length: 100
+      multi_line_output: 3
+  testing:
+    enabled: true
+    pytest:
+      enabled: true
+      test_path: "tests"
+      coverage: true
+      coverage_report: "html"
+      coverage_report_dir: "coverage"
+      coverage_report_name: "coverage"
+      coverage_report_format: "html"
+      coverage_report_show_missing: true
+      coverage_report_show_branches: true
+      coverage_report_show_lines: true
+      coverage_report_show_functions: true
+      coverage_report_show_classes: true
+      coverage_report_show_files: true
+      coverage_report_show_dirs: true
+      coverage_report_show_relative: true
+      coverage_report_show_absolute: true
+      coverage_report_show_percent: true
+      coverage_report_show_total: true
+      coverage_report_show_summary: true
+      coverage_report_show_missing_lines: true
+      coverage_report_show_missing_branches: true
+      coverage_report_show_missing_functions: true
+      coverage_report_show_missing_classes: true
+      coverage_report_show_missing_files: true
+      coverage_report_show_missing_dirs: true
+      coverage_report_show_missing_relative: true
+      coverage_report_show_missing_absolute: true
+      coverage_report_show_missing_percent: true
+      coverage_report_show_missing_total: true
+      coverage_report_show_missing_summary: true
+
+git:
+  enabled: true
+  autofetch: true
+  autopush: false
+  autopull: false
+  autostash: true
+  autostash_pop: true
+  autostash_include_untracked: true
+  autostash_include_ignored: true
+  autostash_include_staged: true
+  autostash_include_unstaged: true
+  autostash_include_untracked_files: true
+  autostash_include_ignored_files: true
+  autostash_include_staged_files: true
+  autostash_include_unstaged_files: true
+  autostash_include_untracked_dirs: true
+  autostash_include_ignored_dirs: true
+  autostash_include_staged_dirs: true
+  autostash_include_unstaged_dirs: true
+
+project:
+  name: "video-super-resolution"
+  description: "A robust backend service for video super-resolution processing using the STAR model"
+  version: "1.0.0"
+  paths:
+    uploads: "backend/uploads"
+    processed: "backend/processed"
+    logs: "backend/logs"
+    models: "video_super_resolution/models"
+    scripts: "video_super_resolution/scripts"
+  dependencies:
+    python:
+      - "torch>=1.8.0"
+      - "torchvision>=0.9.0"
+      - "flask>=2.0.0"
+      - "numpy>=1.19.0"
+      - "opencv-python>=4.5.0"
+      - "pillow>=8.0.0"
+      - "requests>=2.25.0"
+      - "psutil>=5.8.0"
+      - "gputil>=1.4.0"
+      - "einops>=0.3.0"
+      - "typing-extensions>=3.7.0"
+      - "werkzeug>=2.0.0"
+      - "flask-cors>=3.0.0" 
